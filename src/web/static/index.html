@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Teacher Agent</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: var(--primary);
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .header .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+        
+        .status-dot.offline {
+            background: var(--danger);
+        }
+        
+        .phrase-card {
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .phrase-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+        
+        .phrase-phonetic {
+            font-family: 'Courier New', monospace;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-record {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-record.recording {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+        }
+        
+        .btn-play {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-next {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .progress {
+            margin-bottom: 25px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .result {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .score-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .score-high { background: var(--success); }
+        .score-medium { background: var(--warning); color: var(--dark); }
+        .score-low { background: var(--danger); }
+        
+        .transcription-box {
+            background: #e3f2fd;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-family: monospace;
+            font-size: 15px;
+        }
+        
+        .word-scores {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .word-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            animation: popIn 0.3s ease;
+        }
+        
+        @keyframes popIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        
+        .word-good { background: #d4edda; color: #155724; }
+        .word-ok { background: #fff3cd; color: #856404; }
+        .word-poor { background: #f8d7da; color: #721c24; }
+        
+        .feedback-section {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .feedback-card {
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        .feedback-correction {
+            background: #d4edda;
+            border-left: 4px solid var(--success);
+            color: #155724;
+        }
+        
+        .feedback-tip {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            color: #856404;
+        }
+        
+        .feedback-exercise {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        
+        .timer {
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .phrase-text {
+                font-size: 20px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎧 English Teacher</h1>
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </div>
+        
+        <div class="phrase-card">
+            <div class="phrase-text" id="phraseText">Carregando frase...</div>
+            <div class="phrase-phonetic" id="phoneticText"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-record" id="recordBtn" onclick="toggleRecording()">
+                <span>🎤</span> Gravar
+            </button>
+            <button class="btn btn-play" id="playBtn" onclick="playModel()" disabled>
+                <span>🔊</span> Ouvir
+            </button>
+            <button class="btn btn-next" id="nextBtn" onclick="nextPhrase()" disabled>
+                <span>➡️</span> Próxima
+            </button>
+        </div>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Processando...</div>
+        </div>
+        
+        <div class="result" id="result">
+            <div class="score-section">
+                <div class="score-circle" id="scoreCircle">75</div>
+            </div>
+            
+            <div class="transcription-box" id="transcriptionBox" style="display:none;">
+                <strong>🎤 Você disse:</strong><br>
+                <span id="transcriptionText"></span>
+            </div>
+            
+            <div class="word-scores" id="wordScores"></div>
+            
+            <div class="feedback-section" id="feedbackSection"></div>
+        </div>
+        
+        <div class="timer" id="timer"></div>
+    </div>
+    
+    <script>
+        // Configuração
+        const API_URL = window.location.origin;
+        let sessionId = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingTimer = null;
+        let recordingSeconds = 0;
+        
+        // Frases de exemplo
+        const phrases = [
+            {
+                text: "The quick brown fox jumps over the lazy dog",
+                phonetic: "/ðə kwɪk braʊn fɑks dʒʌmps ˈoʊvər ðə ˈleɪzi dɔɡ/"
+            },
+            {
+                text: "She sells seashells by the seashore",
+                phonetic: "/ʃi sɛlz ˈsiːʃɛlz baɪ ðə ˈsiːʃɔːr/"
+            },
+            {
+                text: "How much wood would a woodchuck chuck",
+                phonetic: "/haʊ mʌtʃ wʊd wʊd ə ˈwʊdˌtʃʌk tʃʌk/"
+            }
+        ];
+        
+        let currentPhraseIndex = 0;
+        
+        // Inicialização
+        async function init() {
+            await checkHealth();
+            loadPhrase(0);
+        }
+        
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    document.getElementById('statusDot').classList.remove('offline');
+                    document.getElementById('statusText').textContent = 'Online - Pronto';
+                }
+            } catch (e) {
+                document.getElementById('statusDot').classList.add('offline');
+                document.getElementById('statusText').textContent = 'Offline';
+            }
+        }
+        
+        function loadPhrase(index) {
+            const phrase = phrases[index];
+            document.getElementById('phraseText').textContent = phrase.text;
+            document.getElementById('phoneticText').textContent = phrase.phonetic;
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        async function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // Parar gravação
+                stopRecording();
+            } else {
+                // Iniciar gravação
+                await startRecording();
+            }
+        }
+        
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
+                });
+                
+                mediaRecorder = new MediaRecorder(stream, { 
+                    mimeType: 'audio/webm' 
+                });
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    if (audioChunks.length > 0) {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        await processAudio(audioBlob);
+                    }
+                    
+                    // Reset UI
+                    document.getElementById('recordBtn').classList.remove('recording');
+                    document.getElementById('recordBtn').innerHTML = '<span>🎤</span> Gravar';
+                };
+                
+                mediaRecorder.start();
+                
+                // UI update
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('recordBtn').innerHTML = '<span>⏹</span> Parar (10s)';
+                document.getElementById('result').style.display = 'none';
+                
+                // Auto-stop após 10 segundos
+                recordingSeconds = 0;
+                updateTimer();
+                recordingTimer = setInterval(updateTimer, 1000);
+                
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        stopRecording();
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                alert('Erro ao acessar microfone: ' + error.message);
+                console.error(error);
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+            }
+        }
+        
+        function updateTimer() {
+            recordingSeconds++;
+            const remaining = 10 - recordingSeconds;
+            document.getElementById('timer').textContent = `${remaining}s restantes`;
+        }
+        
+        async function processAudio(audioBlob) {
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progress.style.display = 'block';
+            
+            // Se não tem sessão, cria uma
+            if (!sessionId) {
+                const sessionResponse = await fetch(`${API_URL}/api/session`, {
+                    method: 'POST'
+                });
+                const sessionData = await sessionResponse.json();
+                sessionId = sessionData.session_id;
+            }
+            
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            formData.append('expected', phrases[currentPhraseIndex].text);
+            formData.append('session_id', sessionId);
+            
+            try {
+                // Simular progresso
+                let progressValue = 0;
+                const progressInterval = setInterval(() => {
+                    progressValue += 10;
+                    if (progressValue > 90) progressValue = 90;
+                    progressFill.style.width = progressValue + '%';
+                    progressText.textContent = getProgressText(progressValue);
+                }, 300);
+                
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Concluído!';
+                
+                const result = await response.json();
+                
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                    if (result.success) {
+                        displayResult(result);
+                    } else {
+                        alert('Erro na análise: ' + result.error);
+                    }
+                }, 500);
+                
+            } catch (error) {
+                progress.style.display = 'none';
+                alert('Erro na comunicação: ' + error.message);
+                console.error(error);
+            }
+        }
+        
+        function getProgressText(value) {
+            if (value < 30) return 'Transcrevendo...';
+            if (value < 60) return 'Analisando pronúncia...';
+            if (value < 90) return 'Gerando feedback...';
+            return 'Finalizando...';
+        }
+        
+        function displayResult(data) {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            
+            // Score
+            const score = Math.round(data.pronunciation_score || 0);
+            const scoreCircle = document.getElementById('scoreCircle');
+            scoreCircle.textContent = score;
+            scoreCircle.className = 'score-circle';
+            
+            if (score >= 80) scoreCircle.classList.add('score-high');
+            else if (score >= 60) scoreCircle.classList.add('score-medium');
+            else scoreCircle.classList.add('score-low');
+            
+            // Transcrição
+            const transBox = document.getElementById('transcriptionBox');
+            const transText = document.getElementById('transcriptionText');
+            if (data.transcription && data.transcription !== '[Não foi possível transcrever]') {
+                transBox.style.display = 'block';
+                transText.textContent = `"${data.transcription}"`;
+            } else {
+                transBox.style.display = 'none';
+            }
+            
+            // Scores por palavra
+            const wordScores = document.getElementById('wordScores');
+            wordScores.innerHTML = '';
+            if (data.word_scores && Object.keys(data.word_scores).length > 0) {
+                wordScores.innerHTML += '<strong style="width:100%;text-align:center;">📊 Por palavra:</strong>';
+                for (const [word, wordScore] of Object.entries(data.word_scores)) {
+                    const badge = document.createElement('span');
+                    badge.className = 'word-badge';
+                    badge.textContent = `${word}: ${Math.round(wordScore)}`;
+                    
+                    if (wordScore >= 80) badge.classList.add('word-good');
+                    else if (wordScore >= 60) badge.classList.add('word-ok');
+                    else badge.classList.add('word-poor');
+                    
+                    wordScores.appendChild(badge);
+                }
+            }
+            
+            // Feedback
+            const feedbackSection = document.getElementById('feedbackSection');
+            feedbackSection.innerHTML = '';
+            
+            if (data.feedback) {
+                if (data.feedback.correction) {
+                    feedbackSection.innerHTML += `
+                        <div class="feedback-card feedback-correction">
+                            <strong>✅ Correção:</strong><br>
+                            ${data.feedback.correction}
+                        </div>
+                    `;
+                }
+                
+                if (data.feedback.tip) {
+                    feedbackSection.innerHTML += `
+                        <div class="feedback-card feedback-tip">
+                            <strong>💡 Dica:</strong><br>
+                            ${data.feedback.tip}
+                        </div>
+                    `;
+                }
+                
+                if (data.feedback.exercise) {
+                    feedbackSection.innerHTML += `
+                        <div class="feedback-card feedback-exercise">
+                            <strong>📝 Exercício:</strong><br>
+                            ${data.feedback.exercise}
+                        </div>
+                    `;
+                }
+            }
+            
+            // Habilita botão próximo se score for bom
+            if (score >= 60) {
+                document.getElementById('nextBtn').disabled = false;
+            }
+            
+            // Scroll suave para o resultado
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function nextPhrase() {
+            currentPhraseIndex = (currentPhraseIndex + 1) % phrases.length;
+            loadPhrase(currentPhraseIndex);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        async function playModel() {
+            const text = phrases[currentPhraseIndex].text;
+            try {
+                const response = await fetch(`${API_URL}/api/speak`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    await audio.play();
+                    URL.revokeObjectURL(url);
+                } else {
+                    console.warn('TTS não disponível');
+                }
+            } catch (error) {
+                console.warn('TTS error:', error);
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                toggleRecording();
+            } else if (e.code === 'ArrowRight') {
+                nextPhrase();
+            } else if (e.code === 'KeyP') {
+                playModel();
+            }
+        });
+        
+        // Iniciar
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Web Framework
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.9
+websockets==12.0
+aiofiles==23.2.1
+
+# Environment
+python-dotenv==1.0.1
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Audio Processing
+sounddevice==0.4.6
+soundfile==0.12.1
+librosa==0.10.1
+pydub==0.25.1
+audioread==3.0.1
+noisereduce==3.0.2
+pyloudnorm==0.1.0
+
+# AI/ML
+torch==2.1.2
+torchaudio==2.1.2
+transformers==4.36.2
+accelerate==0.26.1
+sentencepiece==0.1.99
+protobuf==3.20.3
+
+# Async
+aiohttp==3.9.3
+anyio==4.2.0
+
+# Utils
+numpy==1.24.3
+scipy==1.11.4
+python-magic==0.4.27
+tqdm==4.66.1
+rich==13.7.0
+
+# Development
+pytest==7.4.4
+pytest-asyncio==0.23.3
+black==24.1.1
