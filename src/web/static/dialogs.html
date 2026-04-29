@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diálogos - English Teacher</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.5em;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        
+        /* Seletor de Tema */
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .theme-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .theme-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .theme-card.selected { border-color: #667eea; background: #f0f0ff; }
+        .theme-card .icon { font-size: 2em; display: block; margin-bottom: 5px; }
+        
+        /* Chat */
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+            display: none;
+        }
+        
+        .chat-container.active { display: block; }
+        
+        .chat-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            animation: fadeIn 0.3s ease;
+            line-height: 1.4;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.agent {
+            align-self: flex-start;
+            background: #e3f2fd;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message .role {
+            font-size: 0.75em;
+            font-weight: bold;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        
+        .message .translation {
+            font-size: 0.85em;
+            opacity: 0.6;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .message .listen-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 2px 6px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        .message .listen-btn:hover {
+            background: rgba(0,0,0,0.1);
+        }
+        
+        .chat-input-area {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input:focus { border-color: #667eea; }
+        
+        .btn-send {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-send:hover { background: #5a6fd6; }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Feedback */
+        .feedback-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        
+        .feedback-correct { background: #d4edda; color: #155724; }
+        .feedback-partial { background: #fff3cd; color: #856404; }
+        .feedback-wrong { background: #f8d7da; color: #721c24; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state .icon { font-size: 4em; display: block; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">←</a>
+        <h1>🗣️ Diálogos Interativos</h1>
+    </div>
+    
+    <div class="container">
+        <!-- Seletor de Temas -->
+        <div id="themeSelector" class="theme-selector"></div>
+        
+        <!-- Chat -->
+        <div id="chatContainer" class="chat-container">
+            <div class="chat-header">
+                <span id="chatThemeTitle">Carregando...</span>
+                <button onclick="resetDialog()" style="background:none;border:none;color:white;cursor:pointer;font-size:1.2em;">🔄</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-state">
+                    <span class="icon">💬</span>
+                    <p>Selecione um tema para começar</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Digite sua resposta em inglês..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
+                >
+                <button class="btn-send" onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Estado
+        let currentTheme = null;
+        let dialogLines = [];
+        let currentLineIndex = 0;
+        let userResponses = [];
+        
+        // Inicialização
+        async function init() {
+            await loadThemes();
+        }
+        
+        async function loadThemes() {
+            try {
+                const response = await fetch('/api/dialogs/themes');
+                const data = await response.json();
+                
+                const icons = {
+                    'Aeroporto': '✈️',
+                    'Restaurante': '🍽️',
+                    'Hotel': '🏨',
+                    'Direções': '🗺️',
+                    'Compras': '🛒',
+                    'Emergência': '🏥'
+                };
+                
+                const selector = document.getElementById('themeSelector');
+                selector.innerHTML = data.themes.map(theme => `
+                    <div class="theme-card" onclick="selectTheme('${theme}')" data-theme="${theme}">
+                        <span class="icon">${icons[theme] || '💬'}</span>
+                        ${theme}
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Erro ao carregar temas:', e);
+            }
+        }
+        
+        async function selectTheme(theme) {
+            currentTheme = theme;
+            currentLineIndex = 0;
+            userResponses = [];
+            
+            // Destaca card selecionado
+            document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+            document.querySelector(`[data-theme="${theme}"]`)?.classList.add('selected');
+            
+            // Carrega diálogo
+            try {
+                const response = await fetch(`/api/dialogs/${encodeURIComponent(theme)}`);
+                const data = await response.json();
+                
+                dialogLines = data.dialogs;
+                
+                // Mostra chat
+                document.getElementById('chatContainer').classList.add('active');
+                document.getElementById('chatThemeTitle').textContent = theme;
+                
+                // Limpa mensagens
+                const messagesDiv = document.getElementById('chatMessages');
+                messagesDiv.innerHTML = '';
+                
+                // Mostra primeira fala do agente
+                showAgentLine();
+                
+            } catch (e) {
+                console.error('Erro ao carregar diálogo:', e);
+            }
+        }
+        
+        function showAgentLine() {
+            if (currentLineIndex >= dialogLines.length) {
+                showCompletionMessage();
+                return;
+            }
+            
+            const line = dialogLines[currentLineIndex];
+            
+            // Se for fala do agente
+            if (line.role.includes('Atendente') || line.role.includes('Garçom') || 
+                line.role.includes('Recepcionista') || line.role.includes('Local') ||
+                line.role.includes('Vendedor')) {
+                
+                addMessage('agent', line.role, line.line, line.translation);
+                
+                // Auto-fala com TTS
+                speakText(line.line);
+            }
+        }
+        
+        function addMessage(type, role, text, translation = '') {
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            // Remove empty state se existir
+            const emptyState = messagesDiv.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${type}`;
+            msgDiv.innerHTML = `
+                <div class="role">${role}</div>
+                <div>${text}</div>
+                ${translation ? `<div class="translation">${translation}</div>` : ''}
+                ${type === 'agent' ? `<button class="listen-btn" onclick="speakText('${text.replace(/'/g, "\\'")}')">🔊</button>` : ''}
+            `;
+            
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const userText = input.value.trim();
+            
+            if (!userText || currentLineIndex >= dialogLines.length) return;
+            
+            // Mostra mensagem do usuário
+            addMessage('user', 'Você', userText);
+            input.value = '';
+            
+            // Avalia resposta
+            const expectedLine = dialogLines[currentLineIndex];
+            const feedback = await evaluateResponse(userText, expectedLine.line);
+            
+            // Mostra feedback
+            showFeedback(feedback);
+            
+            // Avança para próxima linha
+            currentLineIndex++;
+            userResponses.push({
+                line: expectedLine.line,
+                response: userText,
+                score: feedback.score
+            });
+            
+            // Mostra próxima fala do agente após breve delay
+            setTimeout(() => {
+                showAgentLine();
+            }, 1500);
+        }
+        
+        async function evaluateResponse(userText, expectedText) {
+            // Usa o tutor IA para avaliar
+            try {
+                const response = await fetch('/api/dialogs/evaluate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_response: userText,
+                        expected_response: expectedText,
+                        theme: currentTheme
+                    })
+                });
+                
+                const data = await response.json();
+                return data;
+            } catch (e) {
+                // Fallback: avaliação simples
+                const similarity = simpleSimilarity(userText.toLowerCase(), expectedText.toLowerCase());
+                return {
+                    score: Math.round(similarity * 100),
+                    feedback: similarity > 0.7 ? '✅ Boa resposta!' : 
+                              similarity > 0.4 ? '⚠️ Quase lá!' : '❌ Tente novamente!',
+                    correct_answer: expectedText
+                };
+            }
+        }
+        
+        function simpleSimilarity(a, b) {
+            const wordsA = a.split(' ');
+            const wordsB = b.split(' ');
+            const common = wordsA.filter(w => wordsB.includes(w)).length;
+            return common / Math.max(wordsA.length, wordsB.length);
+        }
+        
+        function showFeedback(feedback) {
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            const feedbackClass = feedback.score >= 80 ? 'feedback-correct' :
+                                  feedback.score >= 50 ? 'feedback-partial' : 'feedback-wrong';
+            
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = `message agent`;
+            feedbackDiv.innerHTML = `
+                <span class="feedback-badge ${feedbackClass}">${feedback.feedback}</span>
+                ${feedback.score < 80 ? `<br><small>Resposta esperada: <em>${feedback.correct_answer}</em></small>` : ''}
+            `;
+            
+            messagesDiv.appendChild(feedbackDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function showCompletionMessage() {
+            const totalScore = userResponses.length > 0 
+                ? Math.round(userResponses.reduce((sum, r) => sum + r.score, 0) / userResponses.length)
+                : 0;
+            
+            const messagesDiv = document.getElementById('chatMessages');
+            const completionDiv = document.createElement('div');
+            completionDiv.style.cssText = 'text-align:center;padding:20px;';
+            completionDiv.innerHTML = `
+                <div style="font-size:3em;">🎉</div>
+                <h3>Diálogo Completo!</h3>
+                <p>Sua pontuação: <strong>${totalScore}%</strong></p>
+                <p style="color:#888;font-size:0.9em;">${totalScore >= 80 ? 'Excelente! Você está pronto para situações reais!' : 
+                  totalScore >= 60 ? 'Bom trabalho! Continue praticando.' : 
+                  'Continue praticando para melhorar!'}</p>
+                <button onclick="resetDialog()" style="margin-top:10px;padding:10px 20px;background:#667eea;color:white;border:none;border-radius:25px;cursor:pointer;">
+                    🔄 Praticar Novamente
+                </button>
+            `;
+            
+            messagesDiv.appendChild(completionDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function resetDialog() {
+            if (currentTheme) {
+                selectTheme(currentTheme);
+            }
+        }
+        
+        async function speakText(text) {
+            try {
+                const response = await fetch('/api/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const audio = new Audio(URL.createObjectURL(blob));
+                    audio.play();
+                }
+            } catch (e) {
+                console.log('TTS:', e);
+            }
+        }
+        
+        init();
+    </script>
+</body>
+</html>

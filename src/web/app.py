@@ -912,6 +912,77 @@ async def get_dialog_by_theme(theme: str):
         raise HTTPException(status_code=500, detail="Erro ao carregar diálogos")
 
 
+@app.post("/api/dialogs/evaluate")
+async def evaluate_dialog_response(request: dict):
+    """
+    Avalia a resposta do usuário em um diálogo.
+    Compara com a resposta esperada e retorna score + feedback.
+    """
+    user_response = request.get("user_response", "").strip()
+    expected_response = request.get("expected_response", "").strip()
+    theme = request.get("theme", "")
+    
+    if not user_response or not expected_response:
+        raise HTTPException(status_code=400, detail="user_response e expected_response são obrigatórios")
+    
+    try:
+        # Usa o tutor IA para avaliação inteligente
+        from ..llm.tutor import tutor
+        
+        prompt = f"""Avalie a resposta do aluno em um diálogo de {theme}.
+
+        Resposta esperada: "{expected_response}"
+        Resposta do aluno: "{user_response}"
+
+        Avalie de 0 a 100 considerando:
+        - Compreensão do contexto (40%)
+        - Gramática correta (30%)
+        - Vocabulário adequado (30%)
+
+        Responda APENAS com um JSON:
+        {{"score": 85, "feedback": "✅ Boa resposta! Pequeno ajuste na gramática.", "correction": "expected_response"}}"""
+
+        ollama_status = await tutor._check_ollama()
+        
+        if ollama_status.get("running"):
+            # Usa Ollama para avaliação
+            feedback = await tutor.generate_feedback(
+                expected=expected_response,
+                actual=user_response,
+                errors=[],
+                pronunciation_score=50  # placeholder
+            )
+            
+            # Calcula score baseado na similaridade
+            from difflib import SequenceMatcher
+            similarity = SequenceMatcher(None, user_response.lower(), expected_response.lower()).ratio()
+            score = round(similarity * 100)
+            
+            return JSONResponse({
+                "success": True,
+                "score": score,
+                "feedback": "✅ Muito bem!" if score >= 80 else "⚠️ Quase lá!" if score >= 50 else "💪 Continue tentando!",
+                "correct_answer": expected_response,
+                "similarity": round(similarity, 3)
+            })
+        else:
+            # Fallback offline
+            from difflib import SequenceMatcher
+            similarity = SequenceMatcher(None, user_response.lower(), expected_response.lower()).ratio()
+            score = round(similarity * 100)
+            
+            return JSONResponse({
+                "success": True,
+                "score": score,
+                "feedback": "✅ Boa resposta!" if score >= 80 else "⚠️ Quase!" if score >= 50 else "❌ Tente novamente!",
+                "correct_answer": expected_response,
+                "similarity": round(similarity, 3)
+            })
+            
+    except Exception as e:
+        logger.error(f"Erro ao avaliar diálogo: {e}")
+        raise HTTPException(status_code=500, detail="Erro na avaliação")
+
 # ============================================================
 # ENDPOINTS - CONQUISTAS (NOVO)
 # ============================================================

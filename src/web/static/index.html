@@ -79,7 +79,7 @@
         .nav-tab:hover { background: #f0f0f0; }
         .nav-tab.active { background: var(--primary); color: white; }
         
-        /* Grid de Categorias */
+        /* Grid de Categorias/Temas */
         .categories-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -190,6 +190,7 @@
         .btn-record.recording { background: var(--danger); animation: pulse 1.5s infinite; }
         .btn-listen { background: #17a2b8; color: white; }
         .btn-next { background: var(--warning); color: var(--dark); }
+        .btn-send { background: var(--primary); color: white; padding: 10px 20px; }
         
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
@@ -219,41 +220,108 @@
         .score-medium { background: var(--warning); color: var(--dark); }
         .score-low { background: var(--danger); }
         
-        /* Modo Diálogo */
-        .dialog-container {
+        /* Modo Diálogo - Chat */
+        .chat-container {
             background: #f9f9f9;
             border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
         }
         
-        .dialog-line {
-            padding: 12px 15px;
-            margin: 8px 0;
-            border-radius: 10px;
-            animation: fadeIn 0.5s;
+        .chat-message {
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 85%;
+            animation: fadeIn 0.4s ease;
         }
         
-        .dialog-line.role-a {
+        .chat-message.agent {
+            align-self: flex-start;
             background: #e3f2fd;
-            margin-right: 40px;
-            text-align: left;
+            border-bottom-left-radius: 4px;
         }
         
-        .dialog-line.role-b {
-            background: #f3e5f5;
-            margin-left: 40px;
-            text-align: right;
+        .chat-message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
         }
         
-        .dialog-line .speaker {
+        .chat-message .role-label {
+            font-size: 0.7em;
             font-weight: bold;
-            font-size: 0.8em;
             opacity: 0.7;
+            margin-bottom: 3px;
+            text-transform: uppercase;
         }
         
-        .dialog-line .line-text { font-size: 1.1em; margin: 5px 0; }
-        .dialog-line .translation { font-size: 0.9em; opacity: 0.6; font-style: italic; }
+        .chat-message .msg-text {
+            font-size: 1.05em;
+            line-height: 1.4;
+        }
+        
+        .chat-message .msg-translation {
+            font-size: 0.85em;
+            opacity: 0.6;
+            font-style: italic;
+            margin-top: 4px;
+        }
+        
+        .chat-message .listen-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 2px 5px;
+            border-radius: 50%;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .chat-message .listen-btn:hover { opacity: 1; }
+        
+        .feedback-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .feedback-correct { background: #d4edda; color: #155724; }
+        .feedback-partial { background: #fff3cd; color: #856404; }
+        .feedback-wrong { background: #f8d7da; color: #721c24; }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input:focus { border-color: var(--primary); }
+        
+        .completion-banner {
+            text-align: center;
+            padding: 25px;
+        }
+        
+        .completion-banner .big-emoji { font-size: 4em; }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -265,10 +333,14 @@
             .categories-grid { grid-template-columns: repeat(2, 1fr); }
             .word-english { font-size: 1.8em; }
             .header-stats { gap: 10px; font-size: 0.8em; }
+            .chat-message { max-width: 90%; }
         }
     </style>
 </head>
 <body>
+    <!-- ============================================================ -->
+    <!-- HEADER -->
+    <!-- ============================================================ -->
     <div class="header">
         <h1>🎧 English Teacher</h1>
         <div class="header-stats">
@@ -287,18 +359,24 @@
         </div>
     </div>
     
+    <!-- ============================================================ -->
+    <!-- CONTEÚDO PRINCIPAL -->
+    <!-- ============================================================ -->
     <div class="main-container">
-        <!-- Abas -->
+        
+        <!-- Abas de Navegação -->
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="switchTab('vocabulary')">📖 Vocabulário</button>
             <button class="nav-tab" onclick="switchTab('dialogs')">🗣️ Diálogos</button>
             <button class="nav-tab" onclick="switchTab('pronunciation')">🎤 Pronúncia</button>
         </div>
         
-        <!-- Grid de Categorias -->
+        <!-- Grid de Categorias/Temas (dinâmico conforme aba) -->
         <div class="categories-grid" id="categoriesGrid"></div>
         
-        <!-- Card de Estudo de Vocabulário -->
+        <!-- ============================================================ -->
+        <!-- CARD: VOCABULÁRIO -->
+        <!-- ============================================================ -->
         <div class="study-card" id="vocabularyCard">
             <div class="word-display">
                 <div class="word-english" id="wordEnglish">Dog</div>
@@ -308,7 +386,7 @@
             </div>
             
             <div style="text-align: center; margin-bottom: 15px;">
-                <button class="btn btn-listen" onclick="playAudio()">🔊 Ouvir</button>
+                <button class="btn btn-listen" onclick="playWordAudio()">🔊 Ouvir</button>
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
@@ -322,17 +400,39 @@
             </div>
         </div>
         
-        <!-- Card de Diálogo -->
+        <!-- ============================================================ -->
+        <!-- CARD: DIÁLOGOS (CHAT INTERATIVO) -->
+        <!-- ============================================================ -->
         <div class="study-card" id="dialogCard">
-            <div class="dialog-container" id="dialogContainer"></div>
-            <div style="text-align: center;">
-                <button class="btn btn-record" id="dialogRecordBtn" onclick="toggleDialogRecording()">🎤 Responder</button>
+            <div class="chat-container" id="dialogChat">
+                <div style="text-align:center;color:#999;padding:40px;">
+                    <div style="font-size:3em;">💬</div>
+                    <p>Selecione um tema acima para começar o diálogo</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-area" id="dialogInputArea" style="display:none;">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="dialogInput" 
+                    placeholder="Digite sua resposta em inglês..."
+                    onkeypress="if(event.key==='Enter') submitDialogResponse()"
+                >
+                <button class="btn btn-send" onclick="submitDialogResponse()">✉️ Enviar</button>
+            </div>
+            
+            <div id="dialogActionButtons" style="text-align:center;margin-top:15px;display:none;">
+                <button class="btn btn-primary" onclick="nextDialogAgentLine()">➡️ Continuar</button>
+                <button class="btn btn-next" onclick="resetDialog()">🔄 Reiniciar</button>
             </div>
         </div>
         
-        <!-- Card de Pronúncia (original) -->
+        <!-- ============================================================ -->
+        <!-- CARD: PRONÚNCIA (FRASES) -->
+        <!-- ============================================================ -->
         <div class="study-card" id="pronunciationCard">
-            <div class="phrase-box" style="text-align:center; margin-bottom:20px;">
+            <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:1.3em; font-weight:bold;" id="phraseText">The quick brown fox jumps over the lazy dog</div>
                 <div style="color:#888; font-family:monospace;" id="phoneticText">/ðə kwɪk braʊn fɑks dʒʌmps ˈoʊvər ðə ˈleɪzi dɔɡ/</div>
             </div>
@@ -344,10 +444,16 @@
                 <div class="score-circle score-medium" id="phraseScoreCircle">75</div>
             </div>
         </div>
+        
     </div>
     
+    <!-- ============================================================ -->
+    <!-- SCRIPTS -->
+    <!-- ============================================================ -->
     <script>
-        // Estado global
+        // ============================================================
+        // ESTADO GLOBAL
+        // ============================================================
         let currentTab = 'vocabulary';
         let selectedCategory = null;
         let currentWords = [];
@@ -357,12 +463,73 @@
         let sessionWords = [];
         let sessionStartTime = 0;
         
-        // Inicialização
+        // Estado do diálogo
+        let dialogLines = [];
+        let currentDialogIndex = 0;
+        let selectedDialogTheme = null;
+        let isDialogActive = false;
+        
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
         async function init() {
-            await loadCategories();
             await loadUserStats();
+            await loadCategories(); // Carrega categorias de vocabulário por padrão
         }
         
+        // ============================================================
+        // ESTATÍSTICAS DO USUÁRIO
+        // ============================================================
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/user/stats');
+                const data = await response.json();
+                
+                document.getElementById('streakCount').textContent = data.streak?.current_streak || 0;
+                document.getElementById('xpCount').textContent = data.level?.total_xp || 0;
+                
+                if (data.level?.current) {
+                    document.getElementById('levelDisplay').textContent = 
+                        `${data.level.current.icon || '🌱'} ${data.level.current.level}`;
+                }
+            } catch (e) {
+                console.error('Erro ao carregar stats:', e);
+            }
+        }
+        
+        // ============================================================
+        // NAVEGAÇÃO POR ABAS
+        // ============================================================
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Atualiza abas visuais
+            document.querySelectorAll('.nav-tab').forEach((t, i) => {
+                t.classList.toggle('active', 
+                    (tab === 'vocabulary' && i === 0) ||
+                    (tab === 'dialogs' && i === 1) ||
+                    (tab === 'pronunciation' && i === 2)
+                );
+            });
+            
+            // Mostra/esconde cards de estudo
+            document.getElementById('vocabularyCard').classList.toggle('active', tab === 'vocabulary');
+            document.getElementById('dialogCard').classList.toggle('active', tab === 'dialogs');
+            document.getElementById('pronunciationCard').classList.toggle('active', tab === 'pronunciation');
+            
+            // Carrega conteúdo conforme a aba
+            if (tab === 'dialogs') {
+                loadDialogThemes();
+            } else {
+                loadCategories();
+            }
+            
+            document.getElementById('categoriesGrid').style.display = 'grid';
+        }
+        
+        // ============================================================
+        // CARREGAR CATEGORIAS (VOCABULÁRIO)
+        // ============================================================
         async function loadCategories() {
             try {
                 const response = await fetch('/api/categories');
@@ -370,7 +537,7 @@
                 
                 const grid = document.getElementById('categoriesGrid');
                 grid.innerHTML = data.categories.map(cat => `
-                    <div class="category-card" onclick="selectCategory(${cat.id}, '${cat.name}')" data-cat-id="${cat.id}">
+                    <div class="category-card" onclick="selectCategory(${cat.id}, '${cat.name.replace(/'/g, "\\'")}')" data-cat-id="${cat.id}">
                         <div class="icon">${cat.icon}</div>
                         <div class="name">${cat.name}</div>
                         <div class="progress-bar">
@@ -384,53 +551,18 @@
             }
         }
         
-        async function loadUserStats() {
-            try {
-                const response = await fetch('/api/user/stats');
-                const data = await response.json();
-                
-                document.getElementById('streakCount').textContent = data.streak?.current_streak || 0;
-                document.getElementById('xpCount').textContent = data.stats?.total_words_practiced * 10 || 0;
-            } catch (e) {
-                console.error('Erro ao carregar stats:', e);
-            }
-        }
-        
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.nav-tab:${tab === 'vocabulary' ? 'first' : tab === 'dialogs' ? 'nth' : 'last'}-child`).classList.add('active');
-            
-            document.querySelectorAll('.nav-tab').forEach((t, i) => {
-                t.classList.toggle('active', 
-                    (tab === 'vocabulary' && i === 0) ||
-                    (tab === 'dialogs' && i === 1) ||
-                    (tab === 'pronunciation' && i === 2)
-                );
-            });
-            
-            document.getElementById('vocabularyCard').classList.toggle('active', tab === 'vocabulary');
-            document.getElementById('dialogCard').classList.toggle('active', tab === 'dialogs');
-            document.getElementById('pronunciationCard').classList.toggle('active', tab === 'pronunciation');
-            
-            document.getElementById('categoriesGrid').style.display = tab !== 'pronunciation' ? 'grid' : 'none';
-        }
-        
         async function selectCategory(categoryId, categoryName) {
             selectedCategory = categoryId;
             
-            // Destaca card selecionado
             document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
             document.querySelector(`[data-cat-id="${categoryId}"]`)?.classList.add('selected');
             
-            if (currentTab === 'vocabulary') {
-                await loadWords(categoryId);
-            } else if (currentTab === 'dialogs') {
-                await loadDialogs(categoryName);
-            }
+            await loadWords(categoryId);
         }
         
+        // ============================================================
+        // VOCABULÁRIO - CARREGAR E EXIBIR PALAVRAS
+        // ============================================================
         async function loadWords(categoryId) {
             try {
                 const response = await fetch(`/api/categories/${categoryId}/words?limit=10&mode=new`);
@@ -484,7 +616,7 @@
                     })
                 });
                 
-                alert(`🎉 Sessão concluída!\nPalavras praticadas: ${sessionWords.length}\nContinue assim!`);
+                alert(`🎉 Sessão concluída!\nPalavras: ${sessionWords.length}\nContinue assim!`);
                 await loadCategories();
                 await loadUserStats();
                 selectedCategory = null;
@@ -494,9 +626,10 @@
             }
         }
         
+        // ============================================================
+        // GRAVAÇÃO DE ÁUDIO
+        // ============================================================
         async function toggleRecording() {
-            const btn = document.getElementById('recordBtn');
-            
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 stopRecording();
             } else {
@@ -547,15 +680,11 @@
                 if (result.success) {
                     displayScore(result);
                     
-                    // Registra no progresso
                     const wordId = currentWords[currentWordIndex].id;
                     const progressResponse = await fetch('/api/study/word', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            word_id: wordId,
-                            score: result.pronunciation_score
-                        })
+                        body: JSON.stringify({ word_id: wordId, score: result.pronunciation_score })
                     });
                     const progressData = await progressResponse.json();
                     
@@ -565,7 +694,6 @@
                         xp_earned: progressData.xp_earned
                     });
                     
-                    // Atualiza XP e streak no header
                     document.getElementById('xpCount').textContent = 
                         parseInt(document.getElementById('xpCount').textContent) + progressData.xp_earned;
                     document.getElementById('streakCount').textContent = 
@@ -592,10 +720,10 @@
                 (score >= 80 ? '✅ Muito bem!' : score >= 60 ? '👍 Continue!' : '💪 Tente novamente!');
         }
         
-        async function playAudio() {
-            const text = currentWords[currentWordIndex]?.english;
-            if (!text) return;
-            
+        // ============================================================
+        // ÁUDIO TTS
+        // ============================================================
+        async function speakText(text) {
             try {
                 const response = await fetch('/api/speak', {
                     method: 'POST',
@@ -604,34 +732,257 @@
                 });
                 if (response.ok) {
                     const blob = await response.blob();
-                    new Audio(URL.createObjectURL(blob)).play();
+                    const audio = new Audio(URL.createObjectURL(blob));
+                    audio.play();
                 }
             } catch (e) {
-                console.log('TTS não disponível');
+                console.log('TTS:', e);
             }
         }
         
-        async function loadDialogs(theme) {
+        async function playWordAudio() {
+            const text = currentWords[currentWordIndex]?.english;
+            if (text) speakText(text);
+        }
+        
+        function playPhraseAudio() {
+            const text = document.getElementById('phraseText').textContent;
+            if (text) speakText(text);
+        }
+        
+        // ============================================================
+        // DIÁLOGOS - CARREGAR TEMAS
+        // ============================================================
+        async function loadDialogThemes() {
             try {
-                const response = await fetch(`/api/dialogs/${theme}`);
+                const response = await fetch('/api/dialogs/themes');
                 const data = await response.json();
                 
-                const container = document.getElementById('dialogContainer');
-                container.innerHTML = data.dialogs.map(d => `
-                    <div class="dialog-line ${d.role.includes('Atendente') || d.role.includes('Garçom') || d.role.includes('Recepcionista') ? 'role-a' : 'role-b'}">
-                        <div class="speaker">${d.role}</div>
-                        <div class="line-text">${d.line}</div>
-                        <div class="translation">${d.translation}</div>
+                const icons = {
+                    'Aeroporto': '✈️', 'Restaurante': '🍽️', 'Hotel': '🏨',
+                    'Direções': '🗺️', 'Compras': '🛒', 'Emergência': '🏥'
+                };
+                
+                const grid = document.getElementById('categoriesGrid');
+                grid.innerHTML = data.themes.map(theme => `
+                    <div class="category-card" onclick="selectDialogTheme('${theme}')" data-theme="${theme}">
+                        <div class="icon">${icons[theme] || '💬'}</div>
+                        <div class="name">${theme}</div>
                     </div>
                 `).join('');
                 
-                document.getElementById('dialogCard').classList.add('active');
+                // Reseta diálogo
+                resetDialogState();
+                
             } catch (e) {
-                console.error('Erro ao carregar diálogos:', e);
+                console.error('Erro ao carregar temas de diálogo:', e);
+                document.getElementById('categoriesGrid').innerHTML = 
+                    '<p style="text-align:center;padding:20px;grid-column:1/-1;">Erro ao carregar diálogos. O banco de dados foi populado?</p>';
             }
         }
         
-        // Inicializa
+        function resetDialogState() {
+            dialogLines = [];
+            currentDialogIndex = 0;
+            selectedDialogTheme = null;
+            isDialogActive = false;
+            
+            document.getElementById('dialogChat').innerHTML = `
+                <div style="text-align:center;color:#999;padding:40px;">
+                    <div style="font-size:3em;">💬</div>
+                    <p>Selecione um tema acima para começar o diálogo</p>
+                </div>`;
+            document.getElementById('dialogInputArea').style.display = 'none';
+            document.getElementById('dialogActionButtons').style.display = 'none';
+        }
+        
+        // ============================================================
+        // DIÁLOGOS - INICIAR TEMA
+        // ============================================================
+        async function selectDialogTheme(theme) {
+            selectedDialogTheme = theme;
+            currentDialogIndex = 0;
+            isDialogActive = true;
+            
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            document.querySelector(`[data-theme="${theme}"]`)?.classList.add('selected');
+            
+            try {
+                const response = await fetch(`/api/dialogs/${encodeURIComponent(theme)}`);
+                const data = await response.json();
+                
+                dialogLines = data.dialogs;
+                
+                // Limpa chat
+                document.getElementById('dialogChat').innerHTML = '';
+                document.getElementById('dialogInputArea').style.display = 'none';
+                document.getElementById('dialogActionButtons').style.display = 'none';
+                
+                // Mostra primeira fala do agente
+                showAgentLine();
+                
+            } catch (e) {
+                console.error('Erro ao carregar diálogo:', e);
+            }
+        }
+        
+        function showAgentLine() {
+            if (currentDialogIndex >= dialogLines.length) {
+                showDialogCompletion();
+                return;
+            }
+            
+            const line = dialogLines[currentDialogIndex];
+            const isAgent = line.role.includes('Atendente') || 
+                            line.role.includes('Garçom') || 
+                            line.role.includes('Recepcionista') || 
+                            line.role.includes('Local') ||
+                            line.role.includes('Vendedor');
+            
+            if (isAgent) {
+                // Adiciona fala do agente
+                addChatMessage('agent', line.role, line.line, line.translation, true);
+                
+                // Auto-falar com TTS
+                speakText(line.line);
+                
+                // Se a próxima linha for do usuário, mostra input
+                if (currentDialogIndex + 1 < dialogLines.length) {
+                    const nextLine = dialogLines[currentDialogIndex + 1];
+                    const nextIsUser = !(nextLine.role.includes('Atendente') || 
+                                        nextLine.role.includes('Garçom') || 
+                                        nextLine.role.includes('Recepcionista') || 
+                                        nextLine.role.includes('Local') ||
+                                        nextLine.role.includes('Vendedor'));
+                    
+                    if (nextIsUser) {
+                        document.getElementById('dialogInputArea').style.display = 'flex';
+                        document.getElementById('dialogActionButtons').style.display = 'none';
+                        setTimeout(() => document.getElementById('dialogInput')?.focus(), 500);
+                    } else {
+                        document.getElementById('dialogInputArea').style.display = 'none';
+                        document.getElementById('dialogActionButtons').style.display = 'block';
+                    }
+                }
+            }
+        }
+        
+        function addChatMessage(type, role, text, translation = '', showListenBtn = false) {
+            const chat = document.getElementById('dialogChat');
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${type}`;
+            msgDiv.innerHTML = `
+                <div class="role-label">${role}</div>
+                <div class="msg-text">${text}</div>
+                ${translation ? `<div class="msg-translation">${translation}</div>` : ''}
+                ${showListenBtn ? `<button class="listen-btn" onclick="speakText('${text.replace(/'/g, "\\'")}')">🔊</button>` : ''}
+            `;
+            
+            chat.appendChild(msgDiv);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function nextDialogAgentLine() {
+            currentDialogIndex++;
+            document.getElementById('dialogInputArea').style.display = 'none';
+            document.getElementById('dialogActionButtons').style.display = 'none';
+            showAgentLine();
+        }
+        
+        async function submitDialogResponse() {
+            const input = document.getElementById('dialogInput');
+            const userText = input.value.trim();
+            
+            if (!userText || currentDialogIndex + 1 >= dialogLines.length) return;
+            
+            const expectedLine = dialogLines[currentDialogIndex + 1]; // Próxima linha é a esperada
+            
+            // Mostra resposta do usuário
+            addChatMessage('user', 'Você', userText);
+            input.value = '';
+            document.getElementById('dialogInputArea').style.display = 'none';
+            
+            // Avalia resposta
+            let score = 50;
+            let feedbackText = '';
+            
+            try {
+                const response = await fetch('/api/dialogs/evaluate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_response: userText,
+                        expected_response: expectedLine.line,
+                        theme: selectedDialogTheme
+                    })
+                });
+                
+                const data = await response.json();
+                score = data.score || 50;
+                feedbackText = data.feedback || '';
+            } catch (e) {
+                console.error('Erro ao avaliar:', e);
+            }
+            
+            // Mostra feedback
+            const feedbackClass = score >= 80 ? 'feedback-correct' : 
+                                  score >= 50 ? 'feedback-partial' : 'feedback-wrong';
+            
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = `chat-message agent`;
+            feedbackDiv.innerHTML = `
+                <span class="feedback-badge ${feedbackClass}">${feedbackText || (score >= 80 ? '✅ Boa!' : '📝 Continue!')}</span>
+            `;
+            
+            document.getElementById('dialogChat').appendChild(feedbackDiv);
+            document.getElementById('dialogChat').scrollTop = document.getElementById('dialogChat').scrollHeight;
+            
+            // Avança para próxima fala do agente
+            currentDialogIndex += 2;
+            setTimeout(() => showAgentLine(), 1200);
+        }
+        
+        function showDialogCompletion() {
+            document.getElementById('dialogInputArea').style.display = 'none';
+            document.getElementById('dialogActionButtons').style.display = 'none';
+            
+            const chat = document.getElementById('dialogChat');
+            const completionDiv = document.createElement('div');
+            completionDiv.className = 'completion-banner';
+            completionDiv.innerHTML = `
+                <div class="big-emoji">🎉</div>
+                <h3>Diálogo Completo!</h3>
+                <p style="color:#888;">Você completou o diálogo de <strong>${selectedDialogTheme}</strong>!</p>
+                <button class="btn btn-primary" onclick="selectDialogTheme(selectedDialogTheme)" style="margin-top:10px;">
+                    🔄 Praticar Novamente
+                </button>
+                <button class="btn btn-next" onclick="switchTab('dialogs'); loadDialogThemes();" style="margin-top:10px;">
+                    📋 Outro Tema
+                </button>
+            `;
+            
+            chat.appendChild(completionDiv);
+            chat.scrollTop = chat.scrollHeight;
+            isDialogActive = false;
+        }
+        
+        function resetDialog() {
+            if (selectedDialogTheme) {
+                selectDialogTheme(selectedDialogTheme);
+            }
+        }
+        
+        // ============================================================
+        // PRONÚNCIA (placeholder)
+        // ============================================================
+        function togglePhraseRecording() {
+            alert('Modo pronúncia: fale a frase completa.\nEm breve: integração completa com scoring.');
+        }
+        
+        // ============================================================
+        // INIT
+        // ============================================================
         init();
     </script>
 </body>

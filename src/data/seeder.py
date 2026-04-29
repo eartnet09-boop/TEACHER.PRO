@@ -299,35 +299,62 @@ class DataSeeder:
         ]
     
     def _get_dialogs(self) -> List[Dict]:
-        """Retorna diálogos temáticos"""
+        """Retorna diálogos temáticos completos"""
         return [
             # ==================== AEROPORTO ====================
             {"theme": "Aeroporto", "role": "Atendente", "line": "Good morning! Can I see your passport, please?", "translation": "Bom dia! Posso ver seu passaporte, por favor?", "order_num": 1},
             {"theme": "Aeroporto", "role": "Passageiro", "line": "Yes, here it is.", "translation": "Sim, aqui está.", "order_num": 2},
             {"theme": "Aeroporto", "role": "Atendente", "line": "Are you checking any luggage today?", "translation": "Vai despachar alguma bagagem hoje?", "order_num": 3},
             {"theme": "Aeroporto", "role": "Passageiro", "line": "Just this one bag.", "translation": "Apenas esta mala.", "order_num": 4},
-            {"theme": "Aeroporto", "role": "Atendente", "line": "Here is your boarding pass. Your flight leaves from gate B12.", "translation": "Aqui está seu cartão de embarque. Seu voo sai do portão B12.", "order_num": 5},
-            {"theme": "Aeroporto", "role": "Passageiro", "line": "Thank you! What time does boarding start?", "translation": "Obrigado! A que horas começa o embarque?", "order_num": 6},
-            {"theme": "Aeroporto", "role": "Atendente", "line": "Boarding starts at 2 PM. Have a nice flight!", "translation": "O embarque começa às 14h. Tenha um bom voo!", "order_num": 7},
-            
+            {"theme": "Aeroporto", "role": "Atendente", "line": "Here is your boarding pass. Your flight leaves from gate B12 at 3 PM.", "translation": "Aqui está seu cartão de embarque. Seu voo sai do portão B12 às 15h.", "order_num": 5},
+            {"theme": "Aeroporto", "role": "Passageiro", "line": "Thank you! Is the gate far from here?", "translation": "Obrigado! O portão fica longe daqui?", "order_num": 6},
+            {"theme": "Aeroporto", "role": "Atendente", "line": "It's about a 10-minute walk. Have a nice flight!", "translation": "São uns 10 minutos andando. Tenha um bom voo!", "order_num": 7},
+
             # ==================== RESTAURANTE ====================
             {"theme": "Restaurante", "role": "Garçom", "line": "Good evening! Do you have a reservation?", "translation": "Boa noite! Vocês têm reserva?", "order_num": 1},
             {"theme": "Restaurante", "role": "Cliente", "line": "No, we don't. A table for two, please.", "translation": "Não, não temos. Uma mesa para dois, por favor.", "order_num": 2},
             {"theme": "Restaurante", "role": "Garçom", "line": "This way, please. Here is the menu.", "translation": "Por aqui, por favor. Aqui está o cardápio.", "order_num": 3},
             {"theme": "Restaurante", "role": "Garçom", "line": "Are you ready to order?", "translation": "Já estão prontos para pedir?", "order_num": 4},
-            {"theme": "Restaurante", "role": "Cliente", "line": "Yes, I'd like the grilled chicken, please.", "translation": "Sim, eu gostaria do frango grelhado, por favor.", "order_num": 5},
-            {"theme": "Restaurante", "role": "Garçom", "line": "Excellent choice! And to drink?", "translation": "Excelente escolha! E para beber?", "order_num": 6},
-            {"theme": "Restaurante", "role": "Cliente", "line": "A glass of water, please.", "translation": "Um copo de água, por favor.", "order_num": 7},
+            {"theme": "Restaurante", "role": "Cliente", "line": "Yes, I'd like the grilled chicken with rice, please.", "translation": "Sim, eu gostaria do frango grelhado com arroz, por favor.", "order_num": 5},
+            {"theme": "Restaurante", "role": "Garçom", "line": "Excellent choice! Would you like something to drink?", "translation": "Excelente escolha! Gostaria de algo para beber?", "order_num": 6},
+            {"theme": "Restaurante", "role": "Cliente", "line": "Just water, please.", "translation": "Apenas água, por favor.", "order_num": 7},
             {"theme": "Restaurante", "role": "Garçom", "line": "Here is your food. Enjoy your meal!", "translation": "Aqui está sua comida. Bom apetite!", "order_num": 8},
             {"theme": "Restaurante", "role": "Cliente", "line": "Could I have the bill, please?", "translation": "Poderia trazer a conta, por favor?", "order_num": 9},
-            
+
             # ==================== HOTEL ====================
             {"theme": "Hotel", "role": "Recepcionista", "line": "Welcome to the Grand Hotel. How can I help you?", "translation": "Bem-vindo ao Grand Hotel. Como posso ajudar?", "order_num": 1},
             {"theme": "Hotel", "role": "Hóspede", "line": "I have a reservation under the name Silva.", "translation": "Tenho uma reserva no nome Silva.", "order_num": 2},
-            {"theme": "Hotel", "role": "Recepcionista", "line": "Yes, I found it. You'll be in room 305.", "translation": "Sim, encontrei. Você ficará no quarto 305.", "order_num": 3},
+            {"theme": "Hotel", "role": "Recepcionista", "line": "Yes, I found it. You'll be in room 305. Here is your key card.", "translation": "Sim, encontrei. Você ficará no quarto 305. Aqui está seu cartão-chave.", "order_num": 3},
             {"theme": "Hotel", "role": "Hóspede", "line": "What time is breakfast served?", "translation": "A que horas é servido o café da manhã?", "order_num": 4},
-            {"theme": "Hotel", "role": "Recepcionista", "line": "Breakfast is from 6 to 10 AM. The elevator is on your left.", "translation": "O café é das 6h às 10h. O elevador está à sua esquerda.", "order_num": 5},
-            {"theme": "Hotel", "role": "Hóspede", "line": "Thank you very much!", "translation": "Muito obrigado!", "order_num": 6},
+            {"theme": "Hotel", "role": "Recepcionista", "line": "Breakfast is from 6 to 10 AM in the restaurant on the first floor.", "translation": "O café é das 6h às 10h no restaurante do primeiro andar.", "order_num": 5},
+            {"theme": "Hotel", "role": "Hóspede", "line": "Thank you! Also, what's the Wi-Fi password?", "translation": "Obrigado! E qual é a senha do Wi-Fi?", "order_num": 6},
+
+            # ==================== DIREÇÕES ====================
+            {"theme": "Direções", "role": "Turista", "line": "Excuse me, how do I get to the museum?", "translation": "Com licença, como faço para chegar ao museu?", "order_num": 1},
+            {"theme": "Direções", "role": "Local", "line": "Go straight ahead for two blocks, then turn right at the traffic light.", "translation": "Siga em frente por dois quarteirões e vire à direita no semáforo.", "order_num": 2},
+            {"theme": "Direções", "role": "Turista", "line": "Is it far from here? Can I walk?", "translation": "É longe daqui? Dá para ir andando?", "order_num": 3},
+            {"theme": "Direções", "role": "Local", "line": "It's about 15 minutes walking. The museum will be on your left.", "translation": "São uns 15 minutos andando. O museu estará à sua esquerda.", "order_num": 4},
+            {"theme": "Direções", "role": "Turista", "line": "Thank you so much for your help!", "translation": "Muito obrigado pela ajuda!", "order_num": 5},
+            {"theme": "Direções", "role": "Turista", "line": "Excuse me, where is the nearest subway station?", "translation": "Com licença, onde fica a estação de metrô mais próxima?", "order_num": 6},
+            {"theme": "Direções", "role": "Local", "line": "Walk two blocks north. You'll see the station entrance next to the pharmacy.", "translation": "Ande dois quarteirões para o norte. Você verá a entrada da estação ao lado da farmácia.", "order_num": 7},
+            {"theme": "Direções", "role": "Turista", "line": "Which line should I take to go downtown?", "translation": "Qual linha devo pegar para ir ao centro?", "order_num": 8},
+
+            # ==================== COMPRAS ====================
+            {"theme": "Compras", "role": "Vendedor", "line": "Hello! Can I help you find something?", "translation": "Olá! Posso ajudar a encontrar algo?", "order_num": 1},
+            {"theme": "Compras", "role": "Cliente", "line": "Yes, I'm looking for a blue shirt in size medium.", "translation": "Sim, estou procurando uma camisa azul tamanho médio.", "order_num": 2},
+            {"theme": "Compras", "role": "Vendedor", "line": "Here you go. The fitting room is over there.", "translation": "Aqui está. O provador fica ali.", "order_num": 3},
+            {"theme": "Compras", "role": "Cliente", "line": "How much does this cost?", "translation": "Quanto custa isso?", "order_num": 4},
+            {"theme": "Compras", "role": "Vendedor", "line": "It's $35. We have a 20% discount today.", "translation": "São $35. Temos 20% de desconto hoje.", "order_num": 5},
+            {"theme": "Compras", "role": "Cliente", "line": "Great! I'll take it. Do you accept credit cards?", "translation": "Ótimo! Vou levar. Vocês aceitam cartão de crédito?", "order_num": 6},
+            {"theme": "Compras", "role": "Vendedor", "line": "Yes, we do. Cash or card, as you prefer.", "translation": "Sim, aceitamos. Dinheiro ou cartão, como preferir.", "order_num": 7},
+
+            # ==================== EMERGÊNCIA ====================
+            {"theme": "Emergência", "role": "Pessoa", "line": "Excuse me, I need help. Is there a pharmacy nearby?", "translation": "Com licença, preciso de ajuda. Tem uma farmácia por perto?", "order_num": 1},
+            {"theme": "Emergência", "role": "Local", "line": "Yes, there's one on Main Street. Are you feeling okay?", "translation": "Sim, tem uma na Rua Principal. Você está se sentindo bem?", "order_num": 2},
+            {"theme": "Emergência", "role": "Pessoa", "line": "I have a headache. I need to buy some medicine.", "translation": "Estou com dor de cabeça. Preciso comprar um remédio.", "order_num": 3},
+            {"theme": "Emergência", "role": "Local", "line": "The pharmacy is open until 10 PM. It's just around the corner.", "translation": "A farmácia fica aberta até as 22h. É logo na esquina.", "order_num": 4},
+            {"theme": "Emergência", "role": "Pessoa", "line": "Thank you. Also, where is the nearest hospital?", "translation": "Obrigado. E onde fica o hospital mais próximo?", "order_num": 5},
+            {"theme": "Emergência", "role": "Local", "line": "The hospital is about 10 minutes by taxi. Do you need me to call one?", "translation": "O hospital fica a uns 10 minutos de táxi. Quer que eu chame um?", "order_num": 6},
         ]
     
     def _get_achievements(self) -> List[Dict]:
