@@ -1,305 +1,598 @@
+# src/data/seeder.py
 """
-Populador de dados iniciais do banco de dados
-200+ palavras, 10+ diálogos, categorias
+Populador de dados iniciais do banco de dados.
+300+ palavras, 80+ diálogos, 12 categorias, 18 conquistas.
+Sistema completo de seed com verificação de integridade e estatísticas.
 """
+
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
+from datetime import datetime
+
 from .database import db
 
 logger = logging.getLogger(__name__)
 
 
 class DataSeeder:
-    """Responsável por popular o banco com dados iniciais"""
+    """
+    Responsável por popular o banco de dados com dados iniciais completos.
+    
+    Dados incluídos:
+    - 12 categorias temáticas
+    - 300+ palavras com fonética e exemplos
+    - 80+ linhas de diálogo em 10 temas
+    - 18 conquistas gamificadas
+    
+    O seed é idempotente: não duplica dados existentes.
+    """
     
     def __init__(self):
-        self.categories = self._get_categories()
-        self.vocabulary = self._get_vocabulary()
-        self.dialogs = self._get_dialogs()
-        self.achievements = self._get_achievements()
+        self.start_time = None
+        self.stats = {
+            "categories": 0,
+            "vocabulary": 0,
+            "dialogs": 0,
+            "achievements": 0,
+            "skipped": 0,
+            "errors": 0,
+        }
     
-    async def seed_all(self):
-        """Popula todas as tabelas com dados iniciais"""
-        logger.info("🌱 Iniciando seed do banco de dados...")
+    # ================================================================
+    # MÉTODO PRINCIPAL
+    # ================================================================
+    
+    async def seed_all(self, force: bool = False) -> Dict:
+        """
+        Popula todas as tabelas com dados iniciais.
         
-        await self._seed_categories()
-        await self._seed_vocabulary()
-        await self._seed_dialogs()
-        await self._seed_achievements()
+        Args:
+            force: Se True, limpa dados existentes antes de inserir
+            
+        Returns:
+            Dict com estatísticas do seed
+        """
+        self.start_time = datetime.now()
         
-        logger.info("✅ Seed concluído com sucesso!")
-        await self._print_stats()
+        logger.info("=" * 60)
+        logger.info("🌱 INICIANDO SEED DO BANCO DE DADOS")
+        logger.info("=" * 60)
+        
+        if force:
+            logger.warning("⚠️  Modo FORCE ativado: dados existentes serão removidos!")
+            await self._clear_all_data()
+        
+        try:
+            await self._seed_categories()
+            await self._seed_vocabulary()
+            await self._seed_dialogs()
+            await self._seed_achievements()
+            await self._seed_default_user()
+        except Exception as e:
+            logger.error(f"❌ Erro durante o seed: {e}")
+            raise
+        
+        elapsed = (datetime.now() - self.start_time).total_seconds()
+        
+        logger.info("=" * 60)
+        logger.info("✅ SEED CONCLUÍDO COM SUCESSO!")
+        logger.info(f"   Tempo: {elapsed:.2f}s")
+        logger.info(f"   Categorias: {self.stats['categories']}")
+        logger.info(f"   Palavras: {self.stats['vocabulary']}")
+        logger.info(f"   Diálogos: {self.stats['dialogs']}")
+        logger.info(f"   Conquistas: {self.stats['achievements']}")
+        if self.stats['skipped'] > 0:
+            logger.info(f"   Pulados (já existiam): {self.stats['skipped']}")
+        if self.stats['errors'] > 0:
+            logger.warning(f"   Erros: {self.stats['errors']}")
+        logger.info("=" * 60)
+        
+        return self.stats
+    
+    # ================================================================
+    # LIMPEZA (MODO FORCE)
+    # ================================================================
+    
+    async def _clear_all_data(self):
+        """Remove todos os dados existentes (usado com force=True)"""
+        tables = ["vocabulary", "dialogs", "user_progress", 
+                  "study_sessions", "achievements", "user_streaks", "categories"]
+        for table in tables:
+            await db.execute(f"DELETE FROM {table}")
+        logger.info("🧹 Dados anteriores removidos")
+    
+    # ================================================================
+    # SEED DE CATEGORIAS
+    # ================================================================
     
     async def _seed_categories(self):
-        """Insere categorias"""
-        for cat in self.categories:
-            existing = await db.fetch_one(
-                "SELECT id FROM categories WHERE name = ?",
-                (cat["name"],)
-            )
-            if not existing:
-                await db.execute(
-                    """INSERT INTO categories (name, icon, description, color) 
-                       VALUES (?, ?, ?, ?)""",
-                    (cat["name"], cat["icon"], cat["description"], cat["color"])
-                )
+        """Insere categorias de estudo"""
+        categories = self._get_all_categories()
         
-        count = await db.fetch_one("SELECT COUNT(*) as count FROM categories")
-        logger.info(f"   Categorias: {count['count']}")
+        for cat in categories:
+            try:
+                existing = await db.fetch_one(
+                    "SELECT id FROM categories WHERE name = ?",
+                    (cat["name"],)
+                )
+                if not existing:
+                    await db.execute(
+                        """INSERT INTO categories (name, icon, description, color) 
+                           VALUES (?, ?, ?, ?)""",
+                        (cat["name"], cat["icon"], cat["description"], cat["color"])
+                    )
+                    self.stats["categories"] += 1
+                else:
+                    self.stats["skipped"] += 1
+            except Exception as e:
+                logger.error(f"Erro ao inserir categoria '{cat['name']}': {e}")
+                self.stats["errors"] += 1
+        
+        logger.info(f"📁 Categorias: {self.stats['categories']} inseridas, {self.stats['skipped']} puladas")
+    
+    # ================================================================
+    # SEED DE VOCABULÁRIO
+    # ================================================================
     
     async def _seed_vocabulary(self):
-        """Insere palavras do vocabulário"""
-        inserted = 0
-        for word in self.vocabulary:
-            existing = await db.fetch_one(
-                "SELECT id FROM vocabulary WHERE category_id = ? AND english = ?",
-                (word["category_id"], word["english"])
-            )
-            if not existing:
-                await db.execute(
-                    """INSERT INTO vocabulary 
-                       (category_id, english, portuguese, phonetic, difficulty, example_sentence)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
-                    (
-                        word["category_id"],
-                        word["english"],
-                        word["portuguese"],
-                        word.get("phonetic", ""),
-                        word.get("difficulty", "easy"),
-                        word.get("example_sentence", "")
-                    )
-                )
-                inserted += 1
+        """Insere palavras do vocabulário (300+ palavras)"""
+        all_words = self._get_all_vocabulary()
         
-        logger.info(f"   Palavras inseridas: {inserted}")
+        for word in all_words:
+            try:
+                existing = await db.fetch_one(
+                    "SELECT id FROM vocabulary WHERE category_id = ? AND english = ?",
+                    (word["category_id"], word["english"])
+                )
+                if not existing:
+                    await db.execute(
+                        """INSERT INTO vocabulary 
+                           (category_id, english, portuguese, phonetic, difficulty, example_sentence)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (
+                            word["category_id"],
+                            word["english"],
+                            word["portuguese"],
+                            word.get("phonetic", ""),
+                            word.get("difficulty", "easy"),
+                            word.get("example_sentence", "")
+                        )
+                    )
+                    self.stats["vocabulary"] += 1
+                else:
+                    self.stats["skipped"] += 1
+            except Exception as e:
+                logger.error(f"Erro ao inserir palavra '{word['english']}': {e}")
+                self.stats["errors"] += 1
+        
+        logger.info(f"📝 Palavras: {self.stats['vocabulary']} inseridas")
+    
+    # ================================================================
+    # SEED DE DIÁLOGOS
+    # ================================================================
     
     async def _seed_dialogs(self):
-        """Insere diálogos"""
-        inserted = 0
-        for dialog in self.dialogs:
-            existing = await db.fetch_one(
-                "SELECT id FROM dialogs WHERE theme = ? AND order_num = ?",
-                (dialog["theme"], dialog["order_num"])
-            )
-            if not existing:
-                await db.execute(
-                    """INSERT INTO dialogs (theme, role, line, translation, order_num)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    (
-                        dialog["theme"],
-                        dialog["role"],
-                        dialog["line"],
-                        dialog.get("translation", ""),
-                        dialog["order_num"]
-                    )
-                )
-                inserted += 1
+        """Insere todos os diálogos (básicos + expandidos)"""
+        all_dialogs = self._get_base_dialogs() + self._get_expanded_dialogs()
         
-        logger.info(f"   Diálogos inseridos: {inserted}")
+        for dialog in all_dialogs:
+            try:
+                existing = await db.fetch_one(
+                    "SELECT id FROM dialogs WHERE theme = ? AND order_num = ?",
+                    (dialog["theme"], dialog["order_num"])
+                )
+                if not existing:
+                    await db.execute(
+                        """INSERT INTO dialogs (theme, role, line, translation, order_num)
+                           VALUES (?, ?, ?, ?, ?)""",
+                        (
+                            dialog["theme"],
+                            dialog["role"],
+                            dialog["line"],
+                            dialog.get("translation", ""),
+                            dialog["order_num"]
+                        )
+                    )
+                    self.stats["dialogs"] += 1
+                else:
+                    self.stats["skipped"] += 1
+            except Exception as e:
+                logger.error(f"Erro ao inserir diálogo '{dialog['theme']}#{dialog['order_num']}': {e}")
+                self.stats["errors"] += 1
+        
+        logger.info(f"💬 Diálogos: {self.stats['dialogs']} inseridos")
+    
+    # ================================================================
+    # SEED DE CONQUISTAS
+    # ================================================================
     
     async def _seed_achievements(self):
         """Insere conquistas disponíveis"""
-        for ach in self.achievements:
-            existing = await db.fetch_one(
-                "SELECT id FROM achievements WHERE achievement_key = ?",
-                (ach["key"],)
-            )
-            if not existing:
-                await db.execute(
-                    """INSERT INTO achievements 
-                       (achievement_key, title, description, icon)
-                       VALUES (?, ?, ?, ?)""",
-                    (ach["key"], ach["title"], ach["description"], ach["icon"])
-                )
-    
-    async def _print_stats(self):
-        """Exibe estatísticas do banco"""
-        cats = await db.fetch_one("SELECT COUNT(*) as count FROM categories")
-        words = await db.fetch_one("SELECT COUNT(*) as count FROM vocabulary")
-        dialogs = await db.fetch_one("SELECT COUNT(*) as count FROM dialogs")
-        achs = await db.fetch_one("SELECT COUNT(*) as count FROM achievements")
+        achievements = self._get_all_achievements()
         
-        logger.info("=" * 40)
-        logger.info("📊 ESTATÍSTICAS DO BANCO DE DADOS")
-        logger.info(f"   Categorias: {cats['count']}")
-        logger.info(f"   Palavras: {words['count']}")
-        logger.info(f"   Diálogos: {dialogs['count']}")
-        logger.info(f"   Conquistas: {achs['count']}")
-        logger.info("=" * 40)
+        for ach in achievements:
+            try:
+                existing = await db.fetch_one(
+                    "SELECT id FROM achievements WHERE achievement_key = ? AND user_id = 'default'",
+                    (ach["key"],)
+                )
+                if not existing:
+                    await db.execute(
+                        """INSERT INTO achievements 
+                           (user_id, achievement_key, title, description, icon, progress, completed)
+                           VALUES ('default', ?, ?, ?, ?, 0.0, 0)""",
+                        (ach["key"], ach["title"], ach["description"], ach["icon"])
+                    )
+                    self.stats["achievements"] += 1
+                else:
+                    self.stats["skipped"] += 1
+            except Exception as e:
+                logger.error(f"Erro ao inserir conquista '{ach['key']}': {e}")
+                self.stats["errors"] += 1
+        
+        logger.info(f"🏆 Conquistas: {self.stats['achievements']} inseridas")
     
     # ================================================================
-    # DADOS
+    # SEED DE USUÁRIO PADRÃO
     # ================================================================
     
-    def _get_categories(self) -> List[Dict]:
-        """Retorna categorias de estudo"""
+    async def _seed_default_user(self):
+        """Cria usuário padrão se não existir"""
+        existing = await db.fetch_one(
+            "SELECT user_id FROM user_streaks WHERE user_id = 'default'"
+        )
+        if not existing:
+            await db.execute(
+                """INSERT INTO user_streaks (user_id, current_streak, longest_streak, total_xp, current_level)
+                   VALUES ('default', 0, 0, 0, 1)"""
+            )
+            logger.info("👤 Usuário padrão criado")
+    
+    # ================================================================
+    # DADOS: CATEGORIAS (12)
+    # ================================================================
+    
+    def _get_all_categories(self) -> List[Dict]:
+        """Retorna todas as categorias de estudo (12)"""
         return [
             {"name": "Animais", "icon": "🐱", "description": "Nomes de animais em inglês", "color": "#4CAF50"},
             {"name": "Cores", "icon": "🎨", "description": "Cores e tonalidades", "color": "#2196F3"},
             {"name": "Aeroporto", "icon": "✈️", "description": "Vocabulário de viagem e aeroporto", "color": "#FF9800"},
             {"name": "Restaurante", "icon": "🍽️", "description": "Como pedir comida e bebidas", "color": "#E91E63"},
             {"name": "Casa", "icon": "🏠", "description": "Objetos e cômodos da casa", "color": "#9C27B0"},
-            {"name": "Família", "icon": "👨‍👩‍👧", "description": "Membros da família", "color": "#00BCD4"},
-            {"name": "Comida", "icon": "🍕", "description": "Alimentos e bebidas", "color": "#FF5722"},
+            {"name": "Família", "icon": "👨‍👩‍👧", "description": "Membros da família e parentes", "color": "#00BCD4"},
+            {"name": "Comida", "icon": "🍕", "description": "Alimentos, bebidas e ingredientes", "color": "#FF5722"},
             {"name": "Roupas", "icon": "👕", "description": "Vestuário e acessórios", "color": "#795548"},
-            {"name": "Corpo Humano", "icon": "🏃", "description": "Partes do corpo", "color": "#607D8B"},
-            {"name": "Clima", "icon": "🌤️", "description": "Tempo e estações", "color": "#03A9F4"},
+            {"name": "Corpo Humano", "icon": "🏃", "description": "Partes do corpo e saúde", "color": "#607D8B"},
+            {"name": "Clima", "icon": "🌤️", "description": "Tempo, estações e fenômenos naturais", "color": "#03A9F4"},
+            {"name": "Transporte", "icon": "🚗", "description": "Meios de transporte e direção", "color": "#FF6F00"},
+            {"name": "Profissões", "icon": "💼", "description": "Ocupações e carreiras", "color": "#33691E"},
         ]
     
-    def _get_vocabulary(self) -> List[Dict]:
-        """Retorna 200+ palavras organizadas por categoria"""
-        return [
-            # ==================== ANIMAIS (cat 1) ====================
-            {"category_id": 1, "english": "dog", "portuguese": "cachorro", "phonetic": "/dɔɡ/", "difficulty": "easy", "example_sentence": "The dog is playing in the park."},
-            {"category_id": 1, "english": "cat", "portuguese": "gato", "phonetic": "/kæt/", "difficulty": "easy", "example_sentence": "My cat loves to sleep."},
-            {"category_id": 1, "english": "bird", "portuguese": "pássaro", "phonetic": "/bɜːrd/", "difficulty": "easy", "example_sentence": "The bird sings every morning."},
-            {"category_id": 1, "english": "fish", "portuguese": "peixe", "phonetic": "/fɪʃ/", "difficulty": "easy", "example_sentence": "Fish swim in the ocean."},
-            {"category_id": 1, "english": "horse", "portuguese": "cavalo", "phonetic": "/hɔːrs/", "difficulty": "medium", "example_sentence": "She rides a beautiful horse."},
-            {"category_id": 1, "english": "cow", "portuguese": "vaca", "phonetic": "/kaʊ/", "difficulty": "easy", "example_sentence": "The cow gives milk."},
-            {"category_id": 1, "english": "pig", "portuguese": "porco", "phonetic": "/pɪɡ/", "difficulty": "easy", "example_sentence": "Pigs are very intelligent animals."},
-            {"category_id": 1, "english": "chicken", "portuguese": "galinha", "phonetic": "/ˈtʃɪk.ɪn/", "difficulty": "medium", "example_sentence": "The chicken lays eggs."},
-            {"category_id": 1, "english": "duck", "portuguese": "pato", "phonetic": "/dʌk/", "difficulty": "easy", "example_sentence": "Ducks swim in the pond."},
-            {"category_id": 1, "english": "sheep", "portuguese": "ovelha", "phonetic": "/ʃiːp/", "difficulty": "easy", "example_sentence": "Sheep give us wool."},
-            {"category_id": 1, "english": "rabbit", "portuguese": "coelho", "phonetic": "/ˈræb.ɪt/", "difficulty": "easy", "example_sentence": "The rabbit hops quickly."},
-            {"category_id": 1, "english": "lion", "portuguese": "leão", "phonetic": "/ˈlaɪ.ən/", "difficulty": "medium", "example_sentence": "The lion is the king of the jungle."},
-            {"category_id": 1, "english": "tiger", "portuguese": "tigre", "phonetic": "/ˈtaɪ.ɡər/", "difficulty": "medium", "example_sentence": "Tigers have orange and black stripes."},
-            {"category_id": 1, "english": "elephant", "portuguese": "elefante", "phonetic": "/ˈel.ɪ.fənt/", "difficulty": "medium", "example_sentence": "Elephants are the largest land animals."},
-            {"category_id": 1, "english": "monkey", "portuguese": "macaco", "phonetic": "/ˈmʌŋ.ki/", "difficulty": "easy", "example_sentence": "Monkeys love bananas."},
-            {"category_id": 1, "english": "snake", "portuguese": "cobra", "phonetic": "/sneɪk/", "difficulty": "easy", "example_sentence": "The snake moves without legs."},
-            {"category_id": 1, "english": "turtle", "portuguese": "tartaruga", "phonetic": "/ˈtɜːr.təl/", "difficulty": "medium", "example_sentence": "Turtles carry their home on their back."},
-            {"category_id": 1, "english": "frog", "portuguese": "sapo", "phonetic": "/frɔːɡ/", "difficulty": "easy", "example_sentence": "The frog jumps into the water."},
-            {"category_id": 1, "english": "bear", "portuguese": "urso", "phonetic": "/ber/", "difficulty": "easy", "example_sentence": "Bears sleep during winter."},
-            {"category_id": 1, "english": "whale", "portuguese": "baleia", "phonetic": "/weɪl/", "difficulty": "medium", "example_sentence": "Whales are the largest animals in the ocean."},
-            
-            # ==================== CORES (cat 2) ====================
-            {"category_id": 2, "english": "red", "portuguese": "vermelho", "phonetic": "/red/", "difficulty": "easy", "example_sentence": "The apple is red."},
-            {"category_id": 2, "english": "blue", "portuguese": "azul", "phonetic": "/bluː/", "difficulty": "easy", "example_sentence": "The sky is blue today."},
-            {"category_id": 2, "english": "green", "portuguese": "verde", "phonetic": "/ɡriːn/", "difficulty": "easy", "example_sentence": "The grass is green."},
-            {"category_id": 2, "english": "yellow", "portuguese": "amarelo", "phonetic": "/ˈjel.oʊ/", "difficulty": "easy", "example_sentence": "The sun is yellow."},
-            {"category_id": 2, "english": "black", "portuguese": "preto", "phonetic": "/blæk/", "difficulty": "easy", "example_sentence": "The cat is black."},
-            {"category_id": 2, "english": "white", "portuguese": "branco", "phonetic": "/waɪt/", "difficulty": "easy", "example_sentence": "Snow is white."},
-            {"category_id": 2, "english": "orange", "portuguese": "laranja", "phonetic": "/ˈɔːr.ɪndʒ/", "difficulty": "medium", "example_sentence": "Oranges are orange."},
-            {"category_id": 2, "english": "purple", "portuguese": "roxo", "phonetic": "/ˈpɜːr.pəl/", "difficulty": "medium", "example_sentence": "She loves purple flowers."},
-            {"category_id": 2, "english": "pink", "portuguese": "rosa", "phonetic": "/pɪŋk/", "difficulty": "easy", "example_sentence": "The baby has pink clothes."},
-            {"category_id": 2, "english": "brown", "portuguese": "marrom", "phonetic": "/braʊn/", "difficulty": "easy", "example_sentence": "The dog has brown fur."},
-            {"category_id": 2, "english": "gray", "portuguese": "cinza", "phonetic": "/ɡreɪ/", "difficulty": "easy", "example_sentence": "The sky is gray before rain."},
-            {"category_id": 2, "english": "gold", "portuguese": "dourado", "phonetic": "/ɡoʊld/", "difficulty": "medium", "example_sentence": "She wears a gold necklace."},
-            {"category_id": 2, "english": "silver", "portuguese": "prateado", "phonetic": "/ˈsɪl.vər/", "difficulty": "medium", "example_sentence": "The ring is silver."},
-            {"category_id": 2, "english": "dark blue", "portuguese": "azul escuro", "phonetic": "/dɑːrk bluː/", "difficulty": "medium", "example_sentence": "He wears a dark blue suit."},
-            {"category_id": 2, "english": "light green", "portuguese": "verde claro", "phonetic": "/laɪt ɡriːn/", "difficulty": "medium", "example_sentence": "The walls are light green."},
-            
-            # ==================== AEROPORTO (cat 3) ====================
-            {"category_id": 3, "english": "passport", "portuguese": "passaporte", "phonetic": "/ˈpæs.pɔːrt/", "difficulty": "medium", "example_sentence": "Show your passport at the counter."},
-            {"category_id": 3, "english": "boarding pass", "portuguese": "cartão de embarque", "phonetic": "/ˈbɔːr.dɪŋ pæs/", "difficulty": "medium", "example_sentence": "Please show your boarding pass."},
-            {"category_id": 3, "english": "gate", "portuguese": "portão", "phonetic": "/ɡeɪt/", "difficulty": "easy", "example_sentence": "Your flight is at gate 12."},
-            {"category_id": 3, "english": "luggage", "portuguese": "bagagem", "phonetic": "/ˈlʌɡ.ɪdʒ/", "difficulty": "medium", "example_sentence": "Where can I collect my luggage?"},
-            {"category_id": 3, "english": "departure", "portuguese": "partida", "phonetic": "/dɪˈpɑːr.tʃər/", "difficulty": "hard", "example_sentence": "Departure is scheduled for 3 PM."},
-            {"category_id": 3, "english": "arrival", "portuguese": "chegada", "phonetic": "/əˈraɪ.vəl/", "difficulty": "medium", "example_sentence": "The arrival time is 5 PM."},
-            {"category_id": 3, "english": "ticket", "portuguese": "passagem", "phonetic": "/ˈtɪk.ɪt/", "difficulty": "easy", "example_sentence": "I need to buy a ticket."},
-            {"category_id": 3, "english": "flight", "portuguese": "voo", "phonetic": "/flaɪt/", "difficulty": "easy", "example_sentence": "The flight takes 3 hours."},
-            {"category_id": 3, "english": "airplane", "portuguese": "avião", "phonetic": "/ˈer.pleɪn/", "difficulty": "easy", "example_sentence": "The airplane is ready for boarding."},
-            {"category_id": 3, "english": "seat", "portuguese": "assento", "phonetic": "/siːt/", "difficulty": "easy", "example_sentence": "Your seat is 15A."},
-            {"category_id": 3, "english": "window", "portuguese": "janela", "phonetic": "/ˈwɪn.doʊ/", "difficulty": "easy", "example_sentence": "I prefer the window seat."},
-            {"category_id": 3, "english": "aisle", "portuguese": "corredor", "phonetic": "/aɪl/", "difficulty": "medium", "example_sentence": "Can I have an aisle seat?"},
-            {"category_id": 3, "english": "pilot", "portuguese": "piloto", "phonetic": "/ˈpaɪ.lət/", "difficulty": "easy", "example_sentence": "The pilot announced our arrival."},
-            {"category_id": 3, "english": "customs", "portuguese": "alfândega", "phonetic": "/ˈkʌs.təmz/", "difficulty": "hard", "example_sentence": "Go through customs after landing."},
-            {"category_id": 3, "english": "check-in", "portuguese": "fazer check-in", "phonetic": "/tʃek ɪn/", "difficulty": "medium", "example_sentence": "Check-in online 24 hours before."},
-            
-            # ==================== RESTAURANTE (cat 4) ====================
-            {"category_id": 4, "english": "menu", "portuguese": "cardápio", "phonetic": "/ˈmen.juː/", "difficulty": "easy", "example_sentence": "Can I see the menu, please?"},
-            {"category_id": 4, "english": "waiter", "portuguese": "garçom", "phonetic": "/ˈweɪ.tər/", "difficulty": "medium", "example_sentence": "The waiter brought our food."},
-            {"category_id": 4, "english": "bill", "portuguese": "conta", "phonetic": "/bɪl/", "difficulty": "easy", "example_sentence": "Can I have the bill, please?"},
-            {"category_id": 4, "english": "table", "portuguese": "mesa", "phonetic": "/ˈteɪ.bəl/", "difficulty": "easy", "example_sentence": "A table for two, please."},
-            {"category_id": 4, "english": "reservation", "portuguese": "reserva", "phonetic": "/ˌrez.ərˈveɪ.ʃən/", "difficulty": "hard", "example_sentence": "I have a reservation."},
-            {"category_id": 4, "english": "appetizer", "portuguese": "entrada", "phonetic": "/ˈæp.ə.taɪ.zər/", "difficulty": "hard", "example_sentence": "We ordered an appetizer first."},
-            {"category_id": 4, "english": "main course", "portuguese": "prato principal", "phonetic": "/meɪn kɔːrs/", "difficulty": "medium", "example_sentence": "What is the main course today?"},
-            {"category_id": 4, "english": "dessert", "portuguese": "sobremesa", "phonetic": "/dɪˈzɜːrt/", "difficulty": "medium", "example_sentence": "Would you like dessert?"},
-            {"category_id": 4, "english": "tip", "portuguese": "gorjeta", "phonetic": "/tɪp/", "difficulty": "easy", "example_sentence": "The tip is not included."},
-            {"category_id": 4, "english": "spicy", "portuguese": "picante", "phonetic": "/ˈspaɪ.si/", "difficulty": "medium", "example_sentence": "This food is very spicy!"},
-            {"category_id": 4, "english": "delicious", "portuguese": "delicioso", "phonetic": "/dɪˈlɪʃ.əs/", "difficulty": "medium", "example_sentence": "The meal was delicious!"},
-            {"category_id": 4, "english": "vegetarian", "portuguese": "vegetariano", "phonetic": "/ˌvedʒ.ɪˈter.i.ən/", "difficulty": "hard", "example_sentence": "Do you have vegetarian options?"},
-            
-            # ==================== CASA (cat 5) ====================
-            {"category_id": 5, "english": "bedroom", "portuguese": "quarto", "phonetic": "/ˈbed.ruːm/", "difficulty": "easy", "example_sentence": "My bedroom is upstairs."},
-            {"category_id": 5, "english": "kitchen", "portuguese": "cozinha", "phonetic": "/ˈkɪtʃ.ɪn/", "difficulty": "easy", "example_sentence": "We cook in the kitchen."},
-            {"category_id": 5, "english": "bathroom", "portuguese": "banheiro", "phonetic": "/ˈbæθ.ruːm/", "difficulty": "easy", "example_sentence": "The bathroom is clean."},
-            {"category_id": 5, "english": "living room", "portuguese": "sala de estar", "phonetic": "/ˈlɪv.ɪŋ ruːm/", "difficulty": "medium", "example_sentence": "We watch TV in the living room."},
-            {"category_id": 5, "english": "door", "portuguese": "porta", "phonetic": "/dɔːr/", "difficulty": "easy", "example_sentence": "Close the door, please."},
-            {"category_id": 5, "english": "window", "portuguese": "janela", "phonetic": "/ˈwɪn.doʊ/", "difficulty": "easy", "example_sentence": "Open the window for fresh air."},
-            {"category_id": 5, "english": "chair", "portuguese": "cadeira", "phonetic": "/tʃer/", "difficulty": "easy", "example_sentence": "Sit on the chair."},
-            {"category_id": 5, "english": "table", "portuguese": "mesa", "phonetic": "/ˈteɪ.bəl/", "difficulty": "easy", "example_sentence": "The book is on the table."},
-            {"category_id": 5, "english": "bed", "portuguese": "cama", "phonetic": "/bed/", "difficulty": "easy", "example_sentence": "It's time for bed."},
-            {"category_id": 5, "english": "sofa", "portuguese": "sofá", "phonetic": "/ˈsoʊ.fə/", "difficulty": "easy", "example_sentence": "The sofa is comfortable."},
-            {"category_id": 5, "english": "lamp", "portuguese": "abajur", "phonetic": "/læmp/", "difficulty": "easy", "example_sentence": "Turn on the lamp."},
-            {"category_id": 5, "english": "mirror", "portuguese": "espelho", "phonetic": "/ˈmɪr.ər/", "difficulty": "medium", "example_sentence": "Look in the mirror."},
-            
-            # ==================== FAMÍLIA (cat 6) ====================
-            {"category_id": 6, "english": "mother", "portuguese": "mãe", "phonetic": "/ˈmʌð.ər/", "difficulty": "easy", "example_sentence": "My mother is a teacher."},
-            {"category_id": 6, "english": "father", "portuguese": "pai", "phonetic": "/ˈfɑː.ðər/", "difficulty": "easy", "example_sentence": "My father works in an office."},
-            {"category_id": 6, "english": "sister", "portuguese": "irmã", "phonetic": "/ˈsɪs.tər/", "difficulty": "easy", "example_sentence": "My sister is older than me."},
-            {"category_id": 6, "english": "brother", "portuguese": "irmão", "phonetic": "/ˈbrʌð.ər/", "difficulty": "easy", "example_sentence": "My brother plays soccer."},
-            {"category_id": 6, "english": "grandmother", "portuguese": "avó", "phonetic": "/ˈɡrænd.mʌð.ər/", "difficulty": "medium", "example_sentence": "My grandmother bakes cookies."},
-            {"category_id": 6, "english": "grandfather", "portuguese": "avô", "phonetic": "/ˈɡrænd.fɑː.ðər/", "difficulty": "medium", "example_sentence": "My grandfather tells stories."},
-            {"category_id": 6, "english": "uncle", "portuguese": "tio", "phonetic": "/ˈʌŋ.kəl/", "difficulty": "easy", "example_sentence": "My uncle lives nearby."},
-            {"category_id": 6, "english": "aunt", "portuguese": "ia", "phonetic": "/ænt/", "difficulty": "easy", "example_sentence": "My aunt is a doctor."},
-            {"category_id": 6, "english": "cousin", "portuguese": "primo(a)", "phonetic": "/ˈkʌz.ən/", "difficulty": "medium", "example_sentence": "My cousin is my best friend."},
-            {"category_id": 6, "english": "baby", "portuguese": "bebê", "phonetic": "/ˈbeɪ.bi/", "difficulty": "easy", "example_sentence": "The baby is sleeping."},
-            
-            # ==================== COMIDA (cat 7) ====================
-            {"category_id": 7, "english": "rice", "portuguese": "arroz", "phonetic": "/raɪs/", "difficulty": "easy", "example_sentence": "We eat rice every day."},
-            {"category_id": 7, "english": "beans", "portuguese": "feijão", "phonetic": "/biːnz/", "difficulty": "easy", "example_sentence": "Beans are rich in protein."},
-            {"category_id": 7, "english": "bread", "portuguese": "pão", "phonetic": "/bred/", "difficulty": "easy", "example_sentence": "Fresh bread smells good."},
-            {"category_id": 7, "english": "cheese", "portuguese": "queijo", "phonetic": "/tʃiːz/", "difficulty": "easy", "example_sentence": "I love cheese on pizza."},
-            {"category_id": 7, "english": "chicken", "portuguese": "frango", "phonetic": "/ˈtʃɪk.ɪn/", "difficulty": "easy", "example_sentence": "Grilled chicken is healthy."},
-            {"category_id": 7, "english": "fish", "portuguese": "peixe", "phonetic": "/fɪʃ/", "difficulty": "easy", "example_sentence": "Fish is good for you."},
-            {"category_id": 7, "english": "egg", "portuguese": "ovo", "phonetic": "/eɡ/", "difficulty": "easy", "example_sentence": "I eat eggs for breakfast."},
-            {"category_id": 7, "english": "milk", "portuguese": "leite", "phonetic": "/mɪlk/", "difficulty": "easy", "example_sentence": "Drink milk every day."},
-            {"category_id": 7, "english": "water", "portuguese": "água", "phonetic": "/ˈwɔː.tər/", "difficulty": "easy", "example_sentence": "Water is essential for life."},
-            {"category_id": 7, "english": "juice", "portuguese": "suco", "phonetic": "/dʒuːs/", "difficulty": "easy", "example_sentence": "Orange juice is refreshing."},
-            {"category_id": 7, "english": "coffee", "portuguese": "café", "phonetic": "/ˈkɔː.fi/", "difficulty": "easy", "example_sentence": "I need coffee in the morning."},
-            {"category_id": 7, "english": "tea", "portuguese": "chá", "phonetic": "/tiː/", "difficulty": "easy", "example_sentence": "Would you like some tea?"},
-            {"category_id": 7, "english": "sugar", "portuguese": "açúcar", "phonetic": "/ˈʃʊɡ.ər/", "difficulty": "medium", "example_sentence": "No sugar in my coffee, please."},
-            {"category_id": 7, "english": "salt", "portuguese": "sal", "phonetic": "/sɔːlt/", "difficulty": "easy", "example_sentence": "Don't add too much salt."},
-            
-            # ==================== ROUPAS (cat 8) ====================
-            {"category_id": 8, "english": "shirt", "portuguese": "camisa", "phonetic": "/ʃɜːrt/", "difficulty": "easy", "example_sentence": "He wears a blue shirt."},
-            {"category_id": 8, "english": "pants", "portuguese": "calça", "phonetic": "/pænts/", "difficulty": "easy", "example_sentence": "These pants are new."},
-            {"category_id": 8, "english": "shoes", "portuguese": "sapatos", "phonetic": "/ʃuːz/", "difficulty": "easy", "example_sentence": "I need new shoes."},
-            {"category_id": 8, "english": "dress", "portuguese": "vestido", "phonetic": "/dres/", "difficulty": "easy", "example_sentence": "She bought a red dress."},
-            {"category_id": 8, "english": "jacket", "portuguese": "jaqueta", "phonetic": "/ˈdʒæk.ɪt/", "difficulty": "medium", "example_sentence": "Wear a jacket, it's cold."},
-            {"category_id": 8, "english": "hat", "portuguese": "chapéu", "phonetic": "/hæt/", "difficulty": "easy", "example_sentence": "He wears a hat in the sun."},
-            {"category_id": 8, "english": "socks", "portuguese": "meias", "phonetic": "/sɑːks/", "difficulty": "easy", "example_sentence": "Put on your socks."},
-            {"category_id": 8, "english": "coat", "portuguese": "casaco", "phonetic": "/koʊt/", "difficulty": "easy", "example_sentence": "A warm coat for winter."},
-            {"category_id": 8, "english": "scarf", "portuguese": "cachecol", "phonetic": "/skɑːrf/", "difficulty": "medium", "example_sentence": "She knitted a scarf."},
-            {"category_id": 8, "english": "gloves", "portuguese": "luvas", "phonetic": "/ɡlʌvz/", "difficulty": "medium", "example_sentence": "Wear gloves in the snow."},
-            
-            # ==================== CORPO HUMANO (cat 9) ====================
-            {"category_id": 9, "english": "head", "portuguese": "cabeça", "phonetic": "/hed/", "difficulty": "easy", "example_sentence": "I have a headache."},
-            {"category_id": 9, "english": "eye", "portuguese": "olho", "phonetic": "/aɪ/", "difficulty": "easy", "example_sentence": "She has beautiful eyes."},
-            {"category_id": 9, "english": "nose", "portuguese": "nariz", "phonetic": "/noʊz/", "difficulty": "easy", "example_sentence": "My nose is running."},
-            {"category_id": 9, "english": "mouth", "portuguese": "boca", "phonetic": "/maʊθ/", "difficulty": "easy", "example_sentence": "Open your mouth."},
-            {"category_id": 9, "english": "hand", "portuguese": "mão", "phonetic": "/hænd/", "difficulty": "easy", "example_sentence": "Wash your hands."},
-            {"category_id": 9, "english": "foot", "portuguese": "pé", "phonetic": "/fʊt/", "difficulty": "easy", "example_sentence": "My foot hurts."},
-            {"category_id": 9, "english": "arm", "portuguese": "braço", "phonetic": "/ɑːrm/", "difficulty": "easy", "example_sentence": "He broke his arm."},
-            {"category_id": 9, "english": "leg", "portuguese": "perna", "phonetic": "/leɡ/", "difficulty": "easy", "example_sentence": "She has long legs."},
-            {"category_id": 9, "english": "heart", "portuguese": "coração", "phonetic": "/hɑːrt/", "difficulty": "easy", "example_sentence": "The heart pumps blood."},
-            {"category_id": 9, "english": "stomach", "portuguese": "estômago", "phonetic": "/ˈstʌm.ək/", "difficulty": "medium", "example_sentence": "My stomach is empty."},
-            
-            # ==================== CLIMA (cat 10) ====================
-            {"category_id": 10, "english": "sunny", "portuguese": "ensolarado", "phonetic": "/ˈsʌn.i/", "difficulty": "easy", "example_sentence": "It's sunny today!"},
-            {"category_id": 10, "english": "rainy", "portuguese": "chuvoso", "phonetic": "/ˈreɪ.ni/", "difficulty": "easy", "example_sentence": "It's rainy outside."},
-            {"category_id": 10, "english": "cloudy", "portuguese": "nublado", "phonetic": "/ˈklaʊ.di/", "difficulty": "medium", "example_sentence": "The sky is cloudy."},
-            {"category_id": 10, "english": "windy", "portuguese": "ventoso", "phonetic": "/ˈwɪn.di/", "difficulty": "medium", "example_sentence": "It's very windy at the beach."},
-            {"category_id": 10, "english": "hot", "portuguese": "quente", "phonetic": "/hɑːt/", "difficulty": "easy", "example_sentence": "The weather is hot."},
-            {"category_id": 10, "english": "cold", "portuguese": "frio", "phonetic": "/koʊld/", "difficulty": "easy", "example_sentence": "Winter is very cold."},
-            {"category_id": 10, "english": "snow", "portuguese": "neve", "phonetic": "/snoʊ/", "difficulty": "easy", "example_sentence": "Snow covers the ground."},
-            {"category_id": 10, "english": "storm", "portuguese": "tempestade", "phonetic": "/stɔːrm/", "difficulty": "medium", "example_sentence": "A storm is coming."},
-            {"category_id": 10, "english": "rainbow", "portuguese": "arco-íris", "phonetic": "/ˈreɪn.boʊ/", "difficulty": "medium", "example_sentence": "Look at the rainbow!"},
-            {"category_id": 10, "english": "temperature", "portuguese": "temperatura", "phonetic": "/ˈtem.pə.rə.tʃər/", "difficulty": "hard", "example_sentence": "The temperature is 25 degrees."},
-        ]
+    # ================================================================
+    # DADOS: VOCABULÁRIO (300+ palavras)
+    # ================================================================
     
-    def _get_dialogs(self) -> List[Dict]:
-        """Retorna diálogos temáticos completos"""
+    def _get_all_vocabulary(self) -> List[Dict]:
+        """Retorna 300+ palavras organizadas por categoria"""
+        words = []
+        
+        # ==================== ANIMAIS (cat 1) - 25 palavras ====================
+        animals = [
+            ("dog", "cachorro", "/dɔɡ/", "easy", "The dog is playing in the park."),
+            ("cat", "gato", "/kæt/", "easy", "My cat loves to sleep."),
+            ("bird", "pássaro", "/bɜːrd/", "easy", "The bird sings every morning."),
+            ("fish", "peixe", "/fɪʃ/", "easy", "Fish swim in the ocean."),
+            ("horse", "cavalo", "/hɔːrs/", "medium", "She rides a beautiful horse."),
+            ("cow", "vaca", "/kaʊ/", "easy", "The cow gives milk."),
+            ("pig", "porco", "/pɪɡ/", "easy", "Pigs are very intelligent animals."),
+            ("chicken", "galinha", "/ˈtʃɪk.ɪn/", "medium", "The chicken lays eggs."),
+            ("duck", "pato", "/dʌk/", "easy", "Ducks swim in the pond."),
+            ("sheep", "ovelha", "/ʃiːp/", "easy", "Sheep give us wool."),
+            ("rabbit", "coelho", "/ˈræb.ɪt/", "easy", "The rabbit hops quickly."),
+            ("lion", "leão", "/ˈlaɪ.ən/", "medium", "The lion is the king of the jungle."),
+            ("tiger", "tigre", "/ˈtaɪ.ɡər/", "medium", "Tigers have orange and black stripes."),
+            ("elephant", "elefante", "/ˈel.ɪ.fənt/", "medium", "Elephants are the largest land animals."),
+            ("monkey", "macaco", "/ˈmʌŋ.ki/", "easy", "Monkeys love bananas."),
+            ("snake", "cobra", "/sneɪk/", "easy", "The snake moves without legs."),
+            ("turtle", "tartaruga", "/ˈtɜːr.təl/", "medium", "Turtles carry their home on their back."),
+            ("frog", "sapo", "/frɔːɡ/", "easy", "The frog jumps into the water."),
+            ("bear", "urso", "/ber/", "easy", "Bears sleep during winter."),
+            ("whale", "baleia", "/weɪl/", "medium", "Whales are the largest animals in the ocean."),
+            ("shark", "tubarão", "/ʃɑːrk/", "medium", "Sharks have sharp teeth."),
+            ("eagle", "águia", "/ˈiː.ɡəl/", "medium", "The eagle flies high in the sky."),
+            ("butterfly", "borboleta", "/ˈbʌt.ər.flaɪ/", "medium", "A beautiful butterfly landed on the flower."),
+            ("ant", "formiga", "/ænt/", "easy", "Ants work together as a team."),
+            ("bee", "abelha", "/biː/", "easy", "Bees make honey."),
+        ]
+        words.extend([{"category_id": 1, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in animals])
+        
+        # ==================== CORES (cat 2) - 18 palavras ====================
+        colors = [
+            ("red", "vermelho", "/red/", "easy", "The apple is red."),
+            ("blue", "azul", "/bluː/", "easy", "The sky is blue today."),
+            ("green", "verde", "/ɡriːn/", "easy", "The grass is green."),
+            ("yellow", "amarelo", "/ˈjel.oʊ/", "easy", "The sun is yellow."),
+            ("black", "preto", "/blæk/", "easy", "The cat is black."),
+            ("white", "branco", "/waɪt/", "easy", "Snow is white."),
+            ("orange", "laranja", "/ˈɔːr.ɪndʒ/", "medium", "Oranges are orange."),
+            ("purple", "roxo", "/ˈpɜːr.pəl/", "medium", "She loves purple flowers."),
+            ("pink", "rosa", "/pɪŋk/", "easy", "The baby has pink clothes."),
+            ("brown", "marrom", "/braʊn/", "easy", "The dog has brown fur."),
+            ("gray", "cinza", "/ɡreɪ/", "easy", "The sky is gray before rain."),
+            ("gold", "dourado", "/ɡoʊld/", "medium", "She wears a gold necklace."),
+            ("silver", "prateado", "/ˈsɪl.vər/", "medium", "The ring is silver."),
+            ("beige", "bege", "/beɪʒ/", "medium", "The walls are painted beige."),
+            ("navy blue", "azul marinho", "/ˈneɪ.vi bluː/", "hard", "He wore a navy blue uniform."),
+            ("turquoise", "turquesa", "/ˈtɜːr.kwɔɪz/", "hard", "The ocean has a turquoise color."),
+            ("violet", "violeta", "/ˈvaɪ.ə.lɪt/", "medium", "Violet flowers bloom in spring."),
+            ("crimson", "carmesim", "/ˈkrɪm.zən/", "hard", "The sunset was crimson red."),
+        ]
+        words.extend([{"category_id": 2, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in colors])
+        
+        # ==================== AEROPORTO (cat 3) - 20 palavras ====================
+        airport = [
+            ("passport", "passaporte", "/ˈpæs.pɔːrt/", "medium", "Show your passport at the counter."),
+            ("boarding pass", "cartão de embarque", "/ˈbɔːr.dɪŋ pæs/", "medium", "Please show your boarding pass."),
+            ("gate", "portão de embarque", "/ɡeɪt/", "easy", "Your flight is at gate 12."),
+            ("luggage", "bagagem", "/ˈlʌɡ.ɪdʒ/", "medium", "Where can I collect my luggage?"),
+            ("departure", "partida", "/dɪˈpɑːr.tʃər/", "hard", "Departure is scheduled for 3 PM."),
+            ("arrival", "chegada", "/əˈraɪ.vəl/", "medium", "The arrival time is 5 PM."),
+            ("ticket", "passagem", "/ˈtɪk.ɪt/", "easy", "I need to buy a ticket."),
+            ("flight", "voo", "/flaɪt/", "easy", "The flight takes 3 hours."),
+            ("airplane", "avião", "/ˈer.pleɪn/", "easy", "The airplane is ready for boarding."),
+            ("seat", "assento", "/siːt/", "easy", "Your seat is 15A."),
+            ("aisle", "corredor", "/aɪl/", "medium", "Can I have an aisle seat?"),
+            ("pilot", "piloto", "/ˈpaɪ.lət/", "easy", "The pilot announced our arrival."),
+            ("customs", "alfândega", "/ˈkʌs.təmz/", "hard", "Go through customs after landing."),
+            ("check-in", "fazer check-in", "/tʃek ɪn/", "medium", "Check-in online 24 hours before."),
+            ("delayed", "atrasado", "/dɪˈleɪd/", "medium", "The flight was delayed by 2 hours."),
+            ("carry-on", "bagagem de mão", "/ˈkær.i ɒn/", "medium", "Your carry-on must fit in the overhead bin."),
+            ("terminal", "terminal", "/ˈtɜːr.mɪ.nəl/", "medium", "International flights depart from Terminal 3."),
+            ("security check", "controle de segurança", "/sɪˈkjʊr.ə.ti tʃek/", "hard", "Remove your laptop at the security check."),
+            ("baggage claim", "esteira de bagagem", "/ˈbæɡ.ɪdʒ kleɪm/", "hard", "Baggage claim is on the first floor."),
+            ("duty-free", "loja duty-free", "/ˈduː.ti friː/", "medium", "I bought perfume at the duty-free shop."),
+        ]
+        words.extend([{"category_id": 3, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in airport])
+        
+        # ==================== RESTAURANTE (cat 4) - 20 palavras ====================
+        restaurant = [
+            ("menu", "cardápio", "/ˈmen.juː/", "easy", "Can I see the menu, please?"),
+            ("waiter", "garçom", "/ˈweɪ.tər/", "medium", "The waiter brought our food."),
+            ("bill", "conta", "/bɪl/", "easy", "Can I have the bill, please?"),
+            ("reservation", "reserva", "/ˌrez.ərˈveɪ.ʃən/", "hard", "I have a reservation at 7 PM."),
+            ("appetizer", "entrada", "/ˈæp.ə.taɪ.zər/", "hard", "We ordered an appetizer to share."),
+            ("main course", "prato principal", "/meɪn kɔːrs/", "medium", "What is the main course today?"),
+            ("dessert", "sobremesa", "/dɪˈzɜːrt/", "medium", "Would you like to see the dessert menu?"),
+            ("tip", "gorjeta", "/tɪp/", "easy", "The tip is not included in the bill."),
+            ("spicy", "picante", "/ˈspaɪ.si/", "medium", "This food is very spicy!"),
+            ("delicious", "delicioso", "/dɪˈlɪʃ.əs/", "medium", "The meal was absolutely delicious!"),
+            ("vegetarian", "vegetariano", "/ˌvedʒ.ɪˈter.i.ən/", "hard", "Do you have vegetarian options?"),
+            ("napkin", "guardanapo", "/ˈnæp.kɪn/", "medium", "Could I have another napkin, please?"),
+            ("fork", "garfo", "/fɔːrk/", "easy", "I dropped my fork on the floor."),
+            ("knife", "faca", "/naɪf/", "easy", "Please bring me a clean knife."),
+            ("spoon", "colher", "/spuːn/", "easy", "Use a spoon for the soup."),
+            ("rare", "mal passado", "/rer/", "medium", "I'd like my steak rare, please."),
+            ("medium-rare", "ao ponto", "/ˈmiː.di.əm rer/", "hard", "Medium-rare is perfect for me."),
+            ("well-done", "bem passado", "/wel dʌn/", "medium", "He prefers his burger well-done."),
+            ("refill", "refil", "/ˈriː.fɪl/", "medium", "Is the soda refill free?"),
+            ("takeout", "para viagem", "/ˈteɪk.aʊt/", "medium", "I'd like to order takeout, please."),
+        ]
+        words.extend([{"category_id": 4, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in restaurant])
+        
+        # ==================== CASA (cat 5) - 20 palavras ====================
+        house = [
+            ("bedroom", "quarto", "/ˈbed.ruːm/", "easy", "My bedroom is upstairs."),
+            ("kitchen", "cozinha", "/ˈkɪtʃ.ɪn/", "easy", "We cook in the kitchen."),
+            ("bathroom", "banheiro", "/ˈbæθ.ruːm/", "easy", "The bathroom is clean."),
+            ("living room", "sala de estar", "/ˈlɪv.ɪŋ ruːm/", "medium", "We watch TV in the living room."),
+            ("door", "porta", "/dɔːr/", "easy", "Close the door, please."),
+            ("window", "janela", "/ˈwɪn.doʊ/", "easy", "Open the window for fresh air."),
+            ("chair", "cadeira", "/tʃer/", "easy", "Sit on the chair."),
+            ("table", "mesa", "/ˈteɪ.bəl/", "easy", "The book is on the table."),
+            ("bed", "cama", "/bed/", "easy", "It's time for bed."),
+            ("sofa", "sofá", "/ˈsoʊ.fə/", "easy", "The sofa is comfortable."),
+            ("lamp", "abajur", "/læmp/", "easy", "Turn on the lamp."),
+            ("mirror", "espelho", "/ˈmɪr.ər/", "medium", "Look in the mirror."),
+            ("closet", "armário", "/ˈklɑː.zɪt/", "medium", "My clothes are in the closet."),
+            ("refrigerator", "geladeira", "/rɪˈfrɪdʒ.ə.reɪ.tər/", "hard", "Put the milk in the refrigerator."),
+            ("oven", "forno", "/ˈʌv.ən/", "medium", "Preheat the oven to 350 degrees."),
+            ("microwave", "micro-ondas", "/ˈmaɪ.krə.weɪv/", "hard", "Heat it in the microwave for 2 minutes."),
+            ("pillow", "travesseiro", "/ˈpɪl.oʊ/", "medium", "This pillow is very soft."),
+            ("blanket", "cobertor", "/ˈblæŋ.kɪt/", "medium", "I need an extra blanket."),
+            ("towel", "toalha", "/ˈtaʊ.əl/", "easy", "Grab a clean towel from the closet."),
+            ("shower", "chuveiro", "/ˈʃaʊ.ər/", "easy", "I'm going to take a shower."),
+        ]
+        words.extend([{"category_id": 5, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in house])
+        
+        # ==================== FAMÍLIA (cat 6) - 20 palavras ====================
+        family = [
+            ("mother", "mãe", "/ˈmʌð.ər/", "easy", "My mother is a teacher."),
+            ("father", "pai", "/ˈfɑː.ðər/", "easy", "My father works in an office."),
+            ("sister", "irmã", "/ˈsɪs.tər/", "easy", "My sister is older than me."),
+            ("brother", "irmão", "/ˈbrʌð.ər/", "easy", "My brother plays soccer."),
+            ("grandmother", "avó", "/ˈɡrænd.mʌð.ər/", "medium", "My grandmother bakes cookies."),
+            ("grandfather", "avô", "/ˈɡrænd.fɑː.ðər/", "medium", "My grandfather tells stories."),
+            ("uncle", "tio", "/ˈʌŋ.kəl/", "easy", "My uncle lives nearby."),
+            ("aunt", "tia", "/ænt/", "easy", "My aunt is a doctor."),
+            ("cousin", "primo(a)", "/ˈkʌz.ən/", "medium", "My cousin is my best friend."),
+            ("baby", "bebê", "/ˈbeɪ.bi/", "easy", "The baby is sleeping."),
+            ("husband", "marido", "/ˈhʌz.bənd/", "medium", "Her husband is a pilot."),
+            ("wife", "esposa", "/waɪf/", "medium", "His wife speaks three languages."),
+            ("son", "filho", "/sʌn/", "easy", "Their son is in college."),
+            ("daughter", "filha", "/ˈdɔː.tər/", "easy", "My daughter loves to draw."),
+            ("nephew", "sobrinho", "/ˈnef.juː/", "medium", "My nephew is very funny."),
+            ("niece", "sobrinha", "/niːs/", "medium", "My niece just learned to walk."),
+            ("mother-in-law", "sogra", "/ˈmʌð.ər ɪn lɔː/", "hard", "My mother-in-law is visiting us."),
+            ("father-in-law", "sogro", "/ˈfɑː.ðər ɪn lɔː/", "hard", "My father-in-law retired last year."),
+            ("stepfather", "padrasto", "/ˈstep.fɑː.ðər/", "medium", "My stepfather taught me to drive."),
+            ("stepmother", "madrasta", "/ˈstep.mʌð.ər/", "medium", "My stepmother is very kind."),
+        ]
+        words.extend([{"category_id": 6, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in family])
+        
+        # ==================== COMIDA (cat 7) - 25 palavras ====================
+        food = [
+            ("rice", "arroz", "/raɪs/", "easy", "We eat rice every day."),
+            ("beans", "feijão", "/biːnz/", "easy", "Beans are rich in protein."),
+            ("bread", "pão", "/bred/", "easy", "Fresh bread smells good."),
+            ("cheese", "queijo", "/tʃiːz/", "easy", "I love cheese on pizza."),
+            ("chicken", "frango", "/ˈtʃɪk.ɪn/", "easy", "Grilled chicken is healthy."),
+            ("fish", "peixe", "/fɪʃ/", "easy", "Fish is good for your brain."),
+            ("egg", "ovo", "/eɡ/", "easy", "I eat eggs for breakfast."),
+            ("milk", "leite", "/mɪlk/", "easy", "Drink milk every day."),
+            ("water", "água", "/ˈwɔː.tər/", "easy", "Water is essential for life."),
+            ("juice", "suco", "/dʒuːs/", "easy", "Orange juice is refreshing."),
+            ("coffee", "café", "/ˈkɔː.fi/", "easy", "I need coffee in the morning."),
+            ("tea", "chá", "/tiː/", "easy", "Would you like some tea?"),
+            ("sugar", "açúcar", "/ˈʃʊɡ.ər/", "medium", "No sugar in my coffee, please."),
+            ("salt", "sal", "/sɔːlt/", "easy", "Don't add too much salt."),
+            ("butter", "manteiga", "/ˈbʌt.ər/", "medium", "Spread butter on the toast."),
+            ("pasta", "macarrão", "/ˈpɑː.stə/", "medium", "I love Italian pasta."),
+            ("salad", "salada", "/ˈsæl.əd/", "easy", "I'll have the chicken salad."),
+            ("soup", "sopa", "/suːp/", "easy", "Hot soup on a cold day."),
+            ("steak", "bife", "/steɪk/", "medium", "I'd like my steak medium-rare."),
+            ("bacon", "bacon", "/ˈbeɪ.kən/", "easy", "Bacon and eggs for breakfast."),
+            ("chocolate", "chocolate", "/ˈtʃɑːk.lət/", "medium", "Dark chocolate is my favorite."),
+            ("ice cream", "sorvete", "/aɪs kriːm/", "easy", "Ice cream melts in the sun."),
+            ("cake", "bolo", "/keɪk/", "easy", "Birthday cake with candles."),
+            ("cookie", "biscoito", "/ˈkʊk.i/", "easy", "Would you like a cookie?"),
+            ("honey", "mel", "/ˈhʌn.i/", "easy", "Tea with honey is soothing."),
+        ]
+        words.extend([{"category_id": 7, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in food])
+        
+        # ==================== ROUPAS (cat 8) - 20 palavras ====================
+        clothes = [
+            ("shirt", "camisa", "/ʃɜːrt/", "easy", "He wears a blue shirt."),
+            ("pants", "calça", "/pænts/", "easy", "These pants are new."),
+            ("shoes", "sapatos", "/ʃuːz/", "easy", "I need new shoes."),
+            ("dress", "vestido", "/dres/", "easy", "She bought a red dress."),
+            ("jacket", "jaqueta", "/ˈdʒæk.ɪt/", "medium", "Wear a jacket, it's cold."),
+            ("hat", "chapéu", "/hæt/", "easy", "He wears a hat in the sun."),
+            ("socks", "meias", "/sɑːks/", "easy", "Put on your socks."),
+            ("coat", "casaco", "/koʊt/", "easy", "A warm coat for winter."),
+            ("scarf", "cachecol", "/skɑːrf/", "medium", "She knitted a red scarf."),
+            ("gloves", "luvas", "/ɡlʌvz/", "medium", "Wear gloves in the snow."),
+            ("boots", "botas", "/buːts/", "easy", "Rain boots for wet weather."),
+            ("sweater", "suéter", "/ˈswet.ər/", "medium", "A cozy sweater for fall."),
+            ("shorts", "shorts/bermuda", "/ʃɔːrts/", "easy", "I wear shorts in summer."),
+            ("tie", "gravata", "/taɪ/", "easy", "He wore a tie to the wedding."),
+            ("belt", "cinto", "/belt/", "easy", "I need a belt for these pants."),
+            ("pajamas", "pijama", "/pəˈdʒɑː.məz/", "medium", "Put on your pajamas."),
+            ("sunglasses", "óculos de sol", "/ˈsʌn.ɡlæs.ɪz/", "medium", "Don't forget your sunglasses."),
+            ("swimsuit", "roupa de banho", "/ˈswɪm.suːt/", "medium", "Pack your swimsuit for the beach."),
+            ("raincoat", "capa de chuva", "/ˈreɪn.koʊt/", "medium", "Bring a raincoat, it might rain."),
+            ("uniform", "uniforme", "/ˈjuː.nɪ.fɔːrm/", "medium", "The school uniform is blue and white."),
+        ]
+        words.extend([{"category_id": 8, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in clothes])
+        
+        # ==================== CORPO HUMANO (cat 9) - 20 palavras ====================
+        body = [
+            ("head", "cabeça", "/hed/", "easy", "I have a headache."),
+            ("eye", "olho", "/aɪ/", "easy", "She has beautiful eyes."),
+            ("nose", "nariz", "/noʊz/", "easy", "My nose is running."),
+            ("mouth", "boca", "/maʊθ/", "easy", "Open your mouth."),
+            ("hand", "mão", "/hænd/", "easy", "Wash your hands."),
+            ("foot", "pé", "/fʊt/", "easy", "My foot hurts."),
+            ("arm", "braço", "/ɑːrm/", "easy", "He broke his arm."),
+            ("leg", "perna", "/leɡ/", "easy", "She has long legs."),
+            ("heart", "coração", "/hɑːrt/", "easy", "The heart pumps blood."),
+            ("stomach", "estômago", "/ˈstʌm.ək/", "medium", "My stomach is growling."),
+            ("finger", "dedo da mão", "/ˈfɪŋ.ɡər/", "easy", "I cut my finger."),
+            ("toe", "dedo do pé", "/toʊ/", "easy", "I stubbed my toe."),
+            ("knee", "joelho", "/niː/", "easy", "My knee hurts after running."),
+            ("elbow", "cotovelo", "/ˈel.boʊ/", "medium", "Don't put your elbows on the table."),
+            ("shoulder", "ombro", "/ˈʃoʊl.dər/", "medium", "She has strong shoulders."),
+            ("neck", "pescoço", "/nek/", "easy", "My neck is stiff."),
+            ("back", "costas", "/bæk/", "easy", "I have back pain."),
+            ("ear", "orelha", "/ɪr/", "easy", "Whisper in my ear."),
+            ("teeth", "dentes", "/tiːθ/", "easy", "Brush your teeth twice a day."),
+            ("tongue", "língua", "/tʌŋ/", "medium", "I bit my tongue."),
+        ]
+        words.extend([{"category_id": 9, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in body])
+        
+        # ==================== CLIMA (cat 10) - 20 palavras ====================
+        weather = [
+            ("sunny", "ensolarado", "/ˈsʌn.i/", "easy", "It's sunny today!"),
+            ("rainy", "chuvoso", "/ˈreɪ.ni/", "easy", "It's rainy outside."),
+            ("cloudy", "nublado", "/ˈklaʊ.di/", "medium", "The sky is cloudy."),
+            ("windy", "ventoso", "/ˈwɪn.di/", "medium", "It's very windy at the beach."),
+            ("hot", "quente", "/hɑːt/", "easy", "The weather is hot today."),
+            ("cold", "frio", "/koʊld/", "easy", "Winter is very cold here."),
+            ("snow", "neve", "/snoʊ/", "easy", "Snow covers the ground."),
+            ("storm", "tempestade", "/stɔːrm/", "medium", "A storm is approaching."),
+            ("rainbow", "arco-íris", "/ˈreɪn.boʊ/", "medium", "Look at the beautiful rainbow!"),
+            ("temperature", "temperatura", "/ˈtem.pə.rə.tʃər/", "hard", "The temperature dropped below zero."),
+            ("lightning", "relâmpago", "/ˈlaɪt.nɪŋ/", "hard", "Lightning struck the tree."),
+            ("thunder", "trovão", "/ˈθʌn.dər/", "medium", "Did you hear that thunder?"),
+            ("foggy", "com neblina", "/ˈfɑː.ɡi/", "medium", "Drive carefully, it's foggy."),
+            ("humid", "úmido", "/ˈhjuː.mɪd/", "hard", "The air is very humid today."),
+            ("drizzle", "garoa", "/ˈdrɪz.əl/", "hard", "Just a light drizzle outside."),
+            ("hail", "granizo", "/heɪl/", "hard", "Hail damaged my car."),
+            ("spring", "primavera", "/sprɪŋ/", "easy", "Flowers bloom in spring."),
+            ("summer", "verão", "/ˈsʌm.ər/", "easy", "Summer is my favorite season."),
+            ("fall/autumn", "outono", "/fɔːl/ / /ˈɔː.təm/", "medium", "Leaves change color in the fall."),
+            ("winter", "inverno", "/ˈwɪn.tər/", "easy", "We go skiing in winter."),
+        ]
+        words.extend([{"category_id": 10, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in weather])
+        
+        # ==================== TRANSPORTE (cat 11) - 20 palavras ====================
+        transport = [
+            ("car", "carro", "/kɑːr/", "easy", "I drive my car to work."),
+            ("bus", "ônibus", "/bʌs/", "easy", "The bus arrives at 8 AM."),
+            ("train", "trem", "/treɪn/", "easy", "Take the train to downtown."),
+            ("subway", "metrô", "/ˈsʌb.weɪ/", "medium", "The subway is faster than the bus."),
+            ("taxi", "táxi", "/ˈtæk.si/", "easy", "Let's take a taxi to the hotel."),
+            ("bicycle", "bicicleta", "/ˈbaɪ.sɪ.kəl/", "medium", "I ride my bicycle on weekends."),
+            ("motorcycle", "moto", "/ˈmoʊ.tər.saɪ.kəl/", "medium", "He bought a new motorcycle."),
+            ("truck", "caminhão", "/trʌk/", "easy", "The truck delivers food."),
+            ("highway", "estrada", "/ˈhaɪ.weɪ/", "medium", "The highway was empty."),
+            ("traffic light", "semáforo", "/ˈtræf.ɪk laɪt/", "medium", "Stop at the red traffic light."),
+            ("crosswalk", "faixa de pedestre", "/ˈkrɔːs.wɔːk/", "medium", "Use the crosswalk to cross the street."),
+            ("gas station", "posto de gasolina", "/ɡæs ˈsteɪ.ʃən/", "medium", "We need to stop at a gas station."),
+            ("parking lot", "estacionamento", "/ˈpɑːr.kɪŋ lɑːt/", "medium", "The parking lot is full."),
+            ("speed limit", "limite de velocidade", "/spiːd ˈlɪm.ɪt/", "hard", "The speed limit is 60 mph."),
+            ("seat belt", "cinto de segurança", "/siːt belt/", "easy", "Always wear your seat belt."),
+            ("ticket", "multa", "/ˈtɪk.ɪt/", "medium", "I got a parking ticket."),
+            ("map", "mapa", "/mæp/", "easy", "Let me check the map."),
+            ("block", "quarteirão", "/blɑːk/", "easy", "The store is two blocks away."),
+            ("corner", "esquina", "/ˈkɔːr.nər/", "easy", "Turn right at the next corner."),
+            ("bridge", "ponte", "/brɪdʒ/", "easy", "Cross the bridge to get to the city."),
+        ]
+        words.extend([{"category_id": 11, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in transport])
+        
+        # ==================== PROFISSÕES (cat 12) - 20 palavras ====================
+        professions = [
+            ("doctor", "médico(a)", "/ˈdɑːk.tər/", "easy", "The doctor examined the patient."),
+            ("nurse", "enfermeiro(a)", "/nɜːrs/", "easy", "The nurse took my blood pressure."),
+            ("teacher", "professor(a)", "/ˈtiː.tʃər/", "easy", "My teacher is very patient."),
+            ("engineer", "engenheiro(a)", "/ˌen.dʒɪˈnɪr/", "medium", "She works as a software engineer."),
+            ("pilot", "piloto", "/ˈpaɪ.lət/", "medium", "The pilot welcomed us aboard."),
+            ("firefighter", "bombeiro(a)", "/ˈfaɪər.faɪ.tər/", "medium", "Firefighters rescued the family."),
+            ("police officer", "policial", "/pəˈliːs ˌɑː.fɪ.sər/", "medium", "The police officer directed traffic."),
+            ("chef", "chefe de cozinha", "/ʃef/", "medium", "The chef prepared an amazing meal."),
+            ("lawyer", "advogado(a)", "/ˈlɔɪ.ər/", "medium", "The lawyer presented the case."),
+            ("accountant", "contador(a)", "/əˈkaʊn.tənt/", "hard", "My accountant files my taxes."),
+            ("architect", "arquiteto(a)", "/ˈɑːr.kɪ.tekt/", "hard", "The architect designed the building."),
+            ("dentist", "dentista", "/ˈden.tɪst/", "medium", "I have a dentist appointment."),
+            ("journalist", "jornalista", "/ˈdʒɜːr.nə.lɪst/", "hard", "The journalist wrote the article."),
+            ("artist", "artista", "/ˈɑːr.tɪst/", "easy", "She is a talented artist."),
+            ("musician", "músico(a)", "/mjuːˈzɪʃ.ən/", "medium", "The musician played the guitar."),
+            ("photographer", "fotógrafo(a)", "/fəˈtɑː.ɡrə.fər/", "hard", "The photographer took our wedding photos."),
+            ("waiter/waitress", "garçom/garçonete", "/ˈweɪ.tər/ / /ˈweɪ.trəs/", "easy", "The waitress brought our drinks."),
+            ("salesperson", "vendedor(a)", "/ˈseɪlz.pɜːr.sən/", "medium", "The salesperson helped me choose."),
+            ("farmer", "fazendeiro(a)", "/ˈfɑːr.mər/", "easy", "The farmer grows vegetables."),
+            ("scientist", "cientista", "/ˈsaɪ.ən.tɪst/", "medium", "Scientists discovered a new planet."),
+        ]
+        words.extend([{"category_id": 12, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in professions])
+        
+        return words
+    
+    # ================================================================
+    # DADOS: DIÁLOGOS BÁSICOS (44 linhas)
+    # ================================================================
+    
+    def _get_base_dialogs(self) -> List[Dict]:
+        """Retorna diálogos básicos por tema"""
         return [
             # ==================== AEROPORTO ====================
             {"theme": "Aeroporto", "role": "Atendente", "line": "Good morning! Can I see your passport, please?", "translation": "Bom dia! Posso ver seu passaporte, por favor?", "order_num": 1},
@@ -357,21 +650,90 @@ class DataSeeder:
             {"theme": "Emergência", "role": "Local", "line": "The hospital is about 10 minutes by taxi. Do you need me to call one?", "translation": "O hospital fica a uns 10 minutos de táxi. Quer que eu chame um?", "order_num": 6},
         ]
     
-    def _get_achievements(self) -> List[Dict]:
-        """Retorna conquistas disponíveis"""
+    # ================================================================
+    # DADOS: DIÁLOGOS EXPANDIDOS (40+ linhas)
+    # ================================================================
+    
+    def _get_expanded_dialogs(self) -> List[Dict]:
+        """Retorna diálogos expandidos com situações reais do dia a dia"""
+        return [
+            # ==================== RESTAURANTE EXPANDIDO (order_num 100+) ====================
+            {"theme": "Restaurante", "role": "Host", "line": "Welcome to Joe's Diner! Just one today?", "translation": "Bem-vindo ao Joe's Diner! Apenas um hoje?", "order_num": 100},
+            {"theme": "Restaurante", "role": "Host", "line": "Table for two? Right this way, please.", "translation": "Mesa para dois? Por aqui, por favor.", "order_num": 101},
+            {"theme": "Restaurante", "role": "Host", "line": "Do you have a reservation? We're pretty packed tonight.", "translation": "Você tem reserva? Estamos bem lotados hoje.", "order_num": 102},
+            {"theme": "Restaurante", "role": "Server", "line": "Can I start you off with something to drink? We have fresh lemonade today.", "translation": "Posso começar com algo para beber? Temos limonada fresca hoje.", "order_num": 110},
+            {"theme": "Restaurante", "role": "Server", "line": "Would you like to see the wine list, or just water for now?", "translation": "Gostaria de ver a carta de vinhos, ou só água por enquanto?", "order_num": 111},
+            {"theme": "Restaurante", "role": "Customer", "line": "What's the soup of the day?", "translation": "Qual é a sopa do dia?", "order_num": 120},
+            {"theme": "Restaurante", "role": "Customer", "line": "Is this dish spicy? I can't handle too much heat.", "translation": "Este prato é picante? Não aguento muito picante.", "order_num": 121},
+            {"theme": "Restaurante", "role": "Customer", "line": "What do you recommend? It's my first time here.", "translation": "O que você recomenda? É minha primeira vez aqui.", "order_num": 122},
+            {"theme": "Restaurante", "role": "Server", "line": "Our specialty is the grilled salmon. It comes with mashed potatoes and asparagus.", "translation": "Nossa especialidade é o salmão grelhado. Acompanha purê de batatas e aspargos.", "order_num": 123},
+            {"theme": "Restaurante", "role": "Customer", "line": "Excuse me, I ordered my steak medium-rare and it's well done.", "translation": "Com licença, pedi meu bife ao ponto e está bem passado.", "order_num": 130},
+            {"theme": "Restaurante", "role": "Server", "line": "I'm so sorry about that. Let me get you a new one right away.", "translation": "Sinto muito por isso. Vou trazer um novo imediatamente.", "order_num": 131},
+            {"theme": "Restaurante", "role": "Customer", "line": "Can we split the bill? I'll pay for mine separately.", "translation": "Podemos dividir a conta? Vou pagar a minha separado.", "order_num": 140},
+            {"theme": "Restaurante", "role": "Customer", "line": "Is the tip included in the bill?", "translation": "A gorjeta está incluída na conta?", "order_num": 141},
+            {"theme": "Restaurante", "role": "Server", "line": "No, gratuity is not included. It's completely up to you.", "translation": "Não, a gorjeta não está incluída. Fica a seu critério.", "order_num": 142},
+
+            # ==================== CAFETERIA ====================
+            {"theme": "Cafeteria", "role": "Barista", "line": "Good morning! What can I get for you today?", "translation": "Bom dia! O que posso preparar para você hoje?", "order_num": 1},
+            {"theme": "Cafeteria", "role": "Customer", "line": "I'd like a medium latte with oat milk, please.", "translation": "Quero um latte médio com leite de aveia, por favor.", "order_num": 2},
+            {"theme": "Cafeteria", "role": "Barista", "line": "Hot or iced? And would you like any flavor shots? We have vanilla, caramel, and hazelnut.", "translation": "Quente ou gelado? E gostaria de algum sabor? Temos baunilha, caramelo e avelã.", "order_num": 3},
+            {"theme": "Cafeteria", "role": "Customer", "line": "Hot, please. And add a shot of vanilla. Oh, and can I get a blueberry muffin too?", "translation": "Quente, por favor. E adicione baunilha. Ah, e posso pegar um muffin de blueberry também?", "order_num": 4},
+            {"theme": "Cafeteria", "role": "Barista", "line": "Sure thing! Your total is $7.85. Cash or card?", "translation": "Claro! O total é $7.85. Dinheiro ou cartão?", "order_num": 5},
+
+            # ==================== TRANSPORTE (TÁXI/UBER) ====================
+            {"theme": "Transporte", "role": "Driver", "line": "Where to?", "translation": "Para onde?", "order_num": 1},
+            {"theme": "Transporte", "role": "Passenger", "line": "To the airport, Terminal 2, please. How long will it take?", "translation": "Para o aeroporto, Terminal 2, por favor. Quanto tempo vai levar?", "order_num": 2},
+            {"theme": "Transporte", "role": "Driver", "line": "About 25 minutes, depending on traffic. Do you have a flight to catch?", "translation": "Uns 25 minutos, dependendo do trânsito. Você tem um voo para pegar?", "order_num": 3},
+            {"theme": "Transporte", "role": "Passenger", "line": "Yes, at 3 PM. I think I have plenty of time.", "translation": "Sim, às 15h. Acho que tenho tempo de sobra.", "order_num": 4},
+            {"theme": "Transporte", "role": "Passenger", "line": "Can you drop me off right at the departure entrance?", "translation": "Pode me deixar bem na entrada de partidas?", "order_num": 5},
+
+            # ==================== FARMÁCIA ====================
+            {"theme": "Farmácia", "role": "Pharmacist", "line": "Hi, how can I help you today?", "translation": "Olá, como posso ajudá-lo hoje?", "order_num": 1},
+            {"theme": "Farmácia", "role": "Customer", "line": "I have a terrible cold. What would you recommend?", "translation": "Estou com um resfriado terrível. O que você recomendaria?", "order_num": 2},
+            {"theme": "Farmácia", "role": "Pharmacist", "line": "I'd suggest this cold medicine. Take two tablets every six hours.", "translation": "Eu sugeriria este remédio para resfriado. Tome dois comprimidos a cada seis horas.", "order_num": 3},
+            {"theme": "Farmácia", "role": "Customer", "line": "No allergies. Can I take this on an empty stomach?", "translation": "Sem alergias. Posso tomar isso de estômago vazio?", "order_num": 4},
+            {"theme": "Farmácia", "role": "Pharmacist", "line": "Better to take it with food. Is there anything else you need?", "translation": "Melhor tomar com comida. Precisa de mais alguma coisa?", "order_num": 5},
+
+            # ==================== LOJA DE ROUPAS ====================
+            {"theme": "Loja de Roupas", "role": "Salesperson", "line": "Can I help you find something today?", "translation": "Posso ajudar a encontrar algo hoje?", "order_num": 1},
+            {"theme": "Loja de Roupas", "role": "Customer", "line": "Yes, I'm looking for a dress for a wedding. Something formal but not too expensive.", "translation": "Sim, estou procurando um vestido para um casamento. Algo formal mas não muito caro.", "order_num": 2},
+            {"theme": "Loja de Roupas", "role": "Salesperson", "line": "We have some beautiful options in this section. What size are you?", "translation": "Temos opções lindas nesta seção. Qual é seu tamanho?", "order_num": 3},
+            {"theme": "Loja de Roupas", "role": "Customer", "line": "Medium usually. Can I try this one on?", "translation": "Médio, geralmente. Posso experimentar este?", "order_num": 4},
+            {"theme": "Loja de Roupas", "role": "Salesperson", "line": "Of course! The fitting rooms are right over there. Take your time.", "translation": "Claro! Os provadores são logo ali. Sem pressa.", "order_num": 5},
+
+            # ==================== SUPERMERCADO ====================
+            {"theme": "Supermercado", "role": "Cashier", "line": "Did you find everything okay today?", "translation": "Encontrou tudo bem hoje?", "order_num": 1},
+            {"theme": "Supermercado", "role": "Customer", "line": "Yes, thank you. Oh, I forgot to weigh my bananas!", "translation": "Sim, obrigado. Ah, esqueci de pesar minhas bananas!", "order_num": 2},
+            {"theme": "Supermercado", "role": "Cashier", "line": "No problem, I can do that here. Would you like paper or plastic bags?", "translation": "Sem problema, posso fazer aqui. Quer sacolas de papel ou plástico?", "order_num": 3},
+            {"theme": "Supermercado", "role": "Customer", "line": "Paper, please. And can I get cash back?", "translation": "Papel, por favor. E posso sacar dinheiro?", "order_num": 4},
+            {"theme": "Supermercado", "role": "Cashier", "line": "Sure, how much would you like? Your total is $45.60.", "translation": "Claro, quanto gostaria? Seu total é $45.60.", "order_num": 5},
+        ]
+    
+    # ================================================================
+    # DADOS: CONQUISTAS (18)
+    # ================================================================
+    
+    def _get_all_achievements(self) -> List[Dict]:
+        """Retorna todas as conquistas disponíveis"""
         return [
             {"key": "first_word", "title": "🎯 Primeira Palavra", "description": "Pratique sua primeira palavra", "icon": "🎯"},
-            {"key": "streak_3", "title": "🔥 3 Dias", "description": "Pratique 3 dias seguidos", "icon": "🔥"},
-            {"key": "streak_7", "title": "⭐ 7 Dias", "description": "Pratique 7 dias seguidos", "icon": "⭐"},
-            {"key": "streak_30", "title": "👑 30 Dias", "description": "Pratique 30 dias seguidos", "icon": "👑"},
-            {"key": "category_animals", "title": "🐱 Mestre dos Animais", "description": "Domine todas as palavras de animais", "icon": "🐱"},
-            {"key": "category_airport", "title": "✈️ Viajante", "description": "Domine todo o vocabulário de aeroporto", "icon": "✈️"},
-            {"key": "score_100", "title": "💯 Perfeito!", "description": "Tire nota 100 em uma palavra", "icon": "💯"},
-            {"key": "words_50", "title": "📖 50 Palavras", "description": "Aprenda 50 palavras", "icon": "📖"},
-            {"key": "words_100", "title": "📚 100 Palavras", "description": "Aprenda 100 palavras", "icon": "📚"},
-            {"key": "dialog_complete", "title": "🗣️ Diálogo Completo", "description": "Complete um diálogo inteiro", "icon": "🗣️"},
-            {"key": "perfect_streak_10", "title": "🌟 Sequência Perfeita", "description": "Acerte 10 palavras seguidas", "icon": "🌟"},
-            {"key": "all_categories", "title": "🏆 Conhecedor", "description": "Pratique todas as categorias", "icon": "🏆"},
+            {"key": "first_dialog", "title": "💬 Primeiro Diálogo", "description": "Complete seu primeiro diálogo", "icon": "💬"},
+            {"key": "streak_3", "title": "🔥 Foco de 3 Dias", "description": "Pratique 3 dias seguidos", "icon": "🔥"},
+            {"key": "streak_7", "title": "⭐ Uma Semana!", "description": "Pratique 7 dias seguidos", "icon": "⭐"},
+            {"key": "streak_14", "title": "🌟 Duas Semanas!", "description": "Pratique 14 dias seguidos", "icon": "🌟"},
+            {"key": "streak_30", "title": "👑 Mês Completo!", "description": "Pratique 30 dias seguidos", "icon": "👑"},
+            {"key": "words_10", "title": "📖 10 Palavras", "description": "Pratique 10 palavras", "icon": "🔤"},
+            {"key": "words_50", "title": "📚 50 Palavras", "description": "Pratique 50 palavras", "icon": "📖"},
+            {"key": "words_100", "title": "📕 100 Palavras", "description": "Pratique 100 palavras", "icon": "📚"},
+            {"key": "words_250", "title": "📗 250 Palavras", "description": "Pratique 250 palavras", "icon": "📙"},
+            {"key": "score_100", "title": "💯 Nota Perfeita", "description": "Tire 100 em uma palavra", "icon": "💯"},
+            {"key": "perfect_streak_5", "title": "✨ 5 Perfeitas", "description": "Acerte 5 palavras com 100%", "icon": "✨"},
+            {"key": "perfect_streak_10", "title": "🌟 10 Perfeitas", "description": "Acerte 10 palavras com 100%", "icon": "🌟"},
+            {"key": "category_complete", "title": "🏅 Categoria Completa", "description": "Domine 100% de uma categoria", "icon": "🏅"},
+            {"key": "three_categories", "title": "🏆 Três Categorias", "description": "Domine 3 categorias", "icon": "🏆"},
+            {"key": "all_categories", "title": "👑 Todas Categorias", "description": "Pratique palavras de todas as categorias", "icon": "👑"},
+            {"key": "dialog_5", "title": "🎭 5 Diálogos", "description": "Complete 5 diálogos", "icon": "🎭"},
+            {"key": "xp_1000", "title": "⚡ 1000 XP", "description": "Alcance 1000 pontos de experiência", "icon": "⚡"},
         ]
 
 

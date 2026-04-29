@@ -8,6 +8,8 @@ import uuid
 import logging
 import asyncio
 import time
+import json
+import subprocess
 from pathlib import Path
 from typing import Optional, List
 
@@ -122,36 +124,6 @@ async def log_requests(request: Request, call_next):
     )
     
     return response
-
-
-# Middleware de rate limiting (simplificado)
-if SECURITY_CONFIG["rate_limiting_enabled"]:
-    from collections import defaultdict
-    from datetime import datetime, timedelta
-    
-    rate_limit_store = defaultdict(list)
-    
-    @app.middleware("http")
-    async def rate_limit(request: Request, call_next):
-        """Rate limiting básico por IP"""
-        client_ip = request.client.host if request.client else "unknown"
-        now = datetime.now()
-        window = timedelta(seconds=PERFORMANCE_CONFIG["rate_limit_window_seconds"])
-        
-        # Limpa entradas antigas
-        rate_limit_store[client_ip] = [
-            t for t in rate_limit_store[client_ip]
-            if now - t < window
-        ]
-        
-        if len(rate_limit_store[client_ip]) >= PERFORMANCE_CONFIG["rate_limit_requests"]:
-            return JSONResponse(
-                {"error": "Muitas requisições. Aguarde um momento."},
-                status_code=429
-            )
-        
-        rate_limit_store[client_ip].append(now)
-        return await call_next(request)
 
 
 # ============================================================
@@ -297,11 +269,6 @@ async def health_check():
         "active": len(session_manager.sessions)
     }
     
-    # Feature flags
-    health_data["features"] = {
-        k: v for k, v in FEATURE_FLAGS.items()
-    }
-    
     # Status geral
     all_ok = all(
         c.get("status") == "ok"
@@ -311,16 +278,6 @@ async def health_check():
     health_data["status"] = "ok" if all_ok else "degraded"
     
     return JSONResponse(health_data)
-
-
-@app.get("/api/config/summary")
-async def config_summary():
-    """Retorna resumo das configurações (sem secrets)"""
-    from ..config import get_config_summary
-    return JSONResponse({
-        "success": True,
-        "config": get_config_summary()
-    })
 
 
 # ============================================================
@@ -338,31 +295,6 @@ async def create_session():
         "created_at": session.created_at.isoformat(),
         "expires_in_minutes": SECURITY_CONFIG["session_expiry_minutes"]
     })
-
-
-@app.get("/api/session/{session_id}")
-async def get_session_info(session_id: str):
-    """Retorna informações da sessão"""
-    session = await session_manager.get_session(session_id)
-    
-    if not session:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada ou expirada")
-    
-    return JSONResponse({
-        "success": True,
-        "session_id": session.session_id,
-        "state": session.state.value,
-        "history_count": len(session.history),
-        "created_at": session.created_at.isoformat(),
-        "last_activity": session.last_activity.isoformat(),
-    })
-
-
-@app.delete("/api/session/{session_id}")
-async def delete_session(session_id: str):
-    """Encerra uma sessão"""
-    await session_manager.delete_session(session_id)
-    return JSONResponse({"success": True, "message": "Sessão encerrada"})
 
 
 # ============================================================
@@ -416,7 +348,7 @@ async def analyze_pronunciation(
         with open(temp_webm, "wb") as f:
             f.write(content)
         
-        logger.info(f"Áudio recebido: {len(content)} bytes, sessão: {session.session_id[:8]}")
+        logger.info(f"Áudio recebido: {len(content)} bytes")
         
         # 2. Conversão WebM → WAV
         try:
@@ -428,10 +360,8 @@ async def analyze_pronunciation(
                 .set_sample_width(2)
             )
             audio_segment.export(str(temp_wav), format="wav")
-            logger.debug("Conversão pydub: OK")
         except Exception as e:
             logger.warning(f"pydub falhou: {e}. Tentando ffmpeg...")
-            import subprocess
             result = subprocess.run([
                 "ffmpeg", "-i", str(temp_webm),
                 "-acodec", "pcm_s16le",
@@ -441,7 +371,7 @@ async def analyze_pronunciation(
             ], capture_output=True, text=True, timeout=30)
             
             if result.returncode != 0 or not temp_wav.exists():
-                raise Exception(f"Falha na conversão de áudio: {result.stderr}")
+                raise Exception(f"Falha na conversão de áudio")
         
         # 3. Processamento de áudio
         try:
@@ -452,7 +382,6 @@ async def analyze_pronunciation(
                 normalize=True,
                 trim_silence=True
             )
-            logger.debug(f"Áudio processado: SNR={metadata.snr:.1f}dB")
         except Exception as e:
             logger.warning(f"Processamento falhou: {e}. Usando arquivo original.")
             temp_processed = temp_wav
@@ -493,7 +422,6 @@ async def analyze_pronunciation(
             "strong_words": pronunciation_result.get("strong_words", []),
             "recommendations": pronunciation_result.get("recommendations", []),
             "feedback": feedback,
-            "processing_time_ms": 0,  # TODO: calcular
         }
         
         # Registra no histórico
@@ -509,18 +437,7 @@ async def analyze_pronunciation(
         return JSONResponse({
             "success": False,
             "error": str(e),
-            "session_id": session.session_id if session else None
         }, status_code=400)
-        
-    except asyncio.TimeoutError:
-        logger.error("Timeout no processamento")
-        if session:
-            session.state = SessionState.ERROR
-        return JSONResponse({
-            "success": False,
-            "error": "Processamento excedeu o tempo limite. Tente novamente.",
-            "session_id": session.session_id if session else None
-        }, status_code=504)
         
     except Exception as e:
         logger.error(f"Erro na análise: {e}", exc_info=True)
@@ -528,27 +445,25 @@ async def analyze_pronunciation(
             session.state = SessionState.ERROR
         return JSONResponse({
             "success": False,
-            "error": "Erro interno no processamento. Nossa equipe foi notificada.",
-            "session_id": session.session_id if session else None
+            "error": "Erro interno no processamento.",
         }, status_code=500)
         
     finally:
-        # Limpeza de arquivos temporários (com delay para TTS)
+        # Limpeza de arquivos temporários
         async def cleanup_files():
             await asyncio.sleep(30)
             for temp_file in temp_files:
                 try:
                     if temp_file and temp_file.exists():
                         temp_file.unlink()
-                        logger.debug(f"Arquivo limpo: {temp_file.name}")
-                except Exception as e:
-                    logger.debug(f"Erro ao limpar {temp_file}: {e}")
+                except Exception:
+                    pass
         
         asyncio.create_task(cleanup_files())
 
 
 # ============================================================
-# ENDPOINTS - TTS (NOVO)
+# ENDPOINTS - TTS
 # ============================================================
 
 @app.post("/api/speak")
@@ -570,7 +485,6 @@ async def speak_text(request: dict):
                 audio_path,
                 media_type="audio/wav",
                 filename=f"speech_{hash(text)}.wav",
-                headers={"Cache-Control": "public, max-age=3600"}
             )
         
         raise HTTPException(status_code=503, detail="Serviço TTS indisponível")
@@ -581,19 +495,14 @@ async def speak_text(request: dict):
 
 
 # ============================================================
-# ENDPOINTS - CATEGORIAS (NOVO)
+# ENDPOINTS - CATEGORIAS E VOCABULÁRIO
 # ============================================================
 
 @app.get("/api/categories")
 async def get_categories(
-    user_id: str = Query("default", description="ID do usuário")
+    user_id: str = Query("default")
 ):
-    """
-    Retorna todas as categorias de estudo com progresso do usuário.
-    """
-    if not FEATURE_FLAGS["vocabulary_mode"]:
-        raise HTTPException(status_code=404, detail="Modo vocabulário desabilitado")
-    
+    """Retorna todas as categorias de estudo com progresso do usuário."""
     try:
         categories = await CategoryRepository.get_with_progress(user_id)
         
@@ -607,47 +516,14 @@ async def get_categories(
         raise HTTPException(status_code=500, detail="Erro ao carregar categorias")
 
 
-@app.get("/api/categories/{category_id}")
-async def get_category_detail(
-    category_id: int,
-    user_id: str = Query("default")
-):
-    """
-    Retorna detalhes de uma categoria específica.
-    """
-    category = await CategoryRepository.get_by_id(category_id)
-    
-    if not category:
-        raise HTTPException(status_code=404, detail="Categoria não encontrada")
-    
-    return JSONResponse({
-        "success": True,
-        "category": category
-    })
-
-
-# ============================================================
-# ENDPOINTS - VOCABULÁRIO (NOVO)
-# ============================================================
-
 @app.get("/api/categories/{category_id}/words")
 async def get_words_for_study(
     category_id: int,
-    mode: str = Query("new", description="Modo: new, review, all"),
-    limit: int = Query(10, ge=1, le=50, description="Quantidade de palavras"),
+    mode: str = Query("new"),
+    limit: int = Query(10, ge=1, le=50),
     user_id: str = Query("default")
 ):
-    """
-    Retorna palavras para estudo de uma categoria.
-    
-    Modos:
-    - new: palavras novas ou menos praticadas
-    - review: palavras que precisam de revisão (SRS)
-    - all: todas as palavras da categoria
-    """
-    if not FEATURE_FLAGS["vocabulary_mode"]:
-        raise HTTPException(status_code=404, detail="Modo vocabulário desabilitado")
-    
+    """Retorna palavras para estudo de uma categoria."""
     try:
         if mode == "all":
             words = await VocabularyRepository.get_by_category(category_id)
@@ -674,37 +550,13 @@ async def get_words_for_study(
         raise HTTPException(status_code=500, detail="Erro ao carregar palavras")
 
 
-@app.get("/api/words/search")
-async def search_words(
-    q: str = Query(..., min_length=1, description="Termo de busca"),
-    limit: int = Query(20, ge=1, le=50)
-):
-    """
-    Busca palavras no vocabulário.
-    Pesquisa em inglês e português.
-    """
-    if not q:
-        raise HTTPException(status_code=400, detail="Termo de busca necessário")
-    
-    words = await VocabularyRepository.search(q)
-    
-    return JSONResponse({
-        "success": True,
-        "query": q,
-        "total": len(words),
-        "words": words[:limit]
-    })
-
-
 # ============================================================
-# ENDPOINTS - PROGRESSO DO USUÁRIO (NOVO)
+# ENDPOINTS - PROGRESSO DO USUÁRIO
 # ============================================================
 
 @app.post("/api/study/word")
 async def record_word_practice(request: dict):
-    """
-    Registra prática de uma palavra e retorna progresso atualizado.
-    """
+    """Registra prática de uma palavra e retorna progresso atualizado."""
     word_id = request.get("word_id")
     score = request.get("score", 0)
     user_id = request.get("user_id", "default")
@@ -712,14 +564,11 @@ async def record_word_practice(request: dict):
     if not word_id:
         raise HTTPException(status_code=400, detail="word_id é obrigatório")
     
-    # Valida score
     score = max(0, min(100, float(score)))
     
     try:
-        # Atualiza progresso da palavra
         progress = await ProgressRepository.update_progress(word_id, score, user_id)
         
-        # Calcula XP ganho
         from ..config import GAMIFICATION_CONFIG
         xp_rules = GAMIFICATION_CONFIG["xp_rules"]
         xp_earned = xp_rules["practice_word_base"]
@@ -729,7 +578,6 @@ async def record_word_practice(request: dict):
         elif score >= 70:
             xp_earned += xp_rules["good_score_bonus"]
         
-        # Atualiza streak e aplica multiplicador
         streak = await SessionRepository.update_streak(user_id)
         if streak.get("current_streak", 0) > 1:
             multiplier = min(
@@ -744,7 +592,6 @@ async def record_word_practice(request: dict):
             "progress": progress,
             "xp_earned": xp_earned,
             "streak": streak,
-            "word_mastered": progress.get("mastered") == 1 if progress else False
         })
         
     except Exception as e:
@@ -754,9 +601,7 @@ async def record_word_practice(request: dict):
 
 @app.post("/api/study/session/complete")
 async def complete_study_session(request: dict):
-    """
-    Finaliza uma sessão de estudo e retorna estatísticas.
-    """
+    """Finaliza uma sessão de estudo e retorna estatísticas."""
     theme = request.get("theme", "")
     mode = request.get("mode", "vocabulary")
     words_data = request.get("words", [])
@@ -772,7 +617,6 @@ async def complete_study_session(request: dict):
         avg_score = sum(w.get("score", 0) for w in words_data) / total
         xp_earned = sum(w.get("xp_earned", 0) for w in words_data)
         
-        # Cria sessão no banco
         session_id = await SessionRepository.create_session(
             theme=theme,
             mode=mode,
@@ -784,7 +628,6 @@ async def complete_study_session(request: dict):
             user_id=user_id
         )
         
-        # Busca estatísticas atualizadas
         stats = await ProgressRepository.get_stats(user_id)
         streak = await SessionRepository.get_streak(user_id)
         
@@ -809,32 +652,25 @@ async def complete_study_session(request: dict):
 
 
 @app.get("/api/user/stats")
-async def get_user_statistics(
-    user_id: str = Query("default")
-):
-    """
-    Retorna estatísticas completas do usuário.
-    Inclui progresso, streaks, sessões recentes e categorias.
-    """
+async def get_user_statistics(user_id: str = Query("default")):
+    """Retorna estatísticas completas do usuário."""
     try:
         stats = await ProgressRepository.get_stats(user_id)
         streak = await SessionRepository.get_streak(user_id)
         recent = await SessionRepository.get_recent(user_id, limit=10)
         categories = await CategoryRepository.get_with_progress(user_id)
         
-        # Calcula nível
         total_xp = (stats.get("total_words_practiced", 0) * 10) if stats else 0
         
         from ..config import GAMIFICATION_CONFIG
         levels = GAMIFICATION_CONFIG["levels"]
         current_level = levels[0]
-        next_level = levels[1] if len(levels) > 1 else None
+        next_level = None
         
         for level in levels:
             if total_xp >= level["xp_required"]:
                 current_level = level
         
-        # Encontra próximo nível
         for level in levels:
             if level["xp_required"] > total_xp:
                 next_level = level
@@ -861,15 +697,13 @@ async def get_user_statistics(
 
 
 # ============================================================
-# ENDPOINTS - DIÁLOGOS (NOVO)
+# ENDPOINTS - DIÁLOGOS
 # ============================================================
 
 @app.get("/api/dialogs/themes")
 async def get_dialog_themes():
-    """
-    Lista todos os temas de diálogo disponíveis.
-    """
-    if not FEATURE_FLAGS["dialog_mode"]:
+    """Lista todos os temas de diálogo disponíveis."""
+    if not FEATURE_FLAGS.get("dialog_mode", True):
         raise HTTPException(status_code=404, detail="Modo diálogo desabilitado")
     
     try:
@@ -887,10 +721,8 @@ async def get_dialog_themes():
 
 @app.get("/api/dialogs/{theme}")
 async def get_dialog_by_theme(theme: str):
-    """
-    Retorna todas as linhas de diálogo de um tema específico.
-    """
-    if not FEATURE_FLAGS["dialog_mode"]:
+    """Retorna todas as linhas de diálogo de um tema específico."""
+    if not FEATURE_FLAGS.get("dialog_mode", True):
         raise HTTPException(status_code=404, detail="Modo diálogo desabilitado")
     
     try:
@@ -915,7 +747,7 @@ async def get_dialog_by_theme(theme: str):
 @app.post("/api/dialogs/evaluate")
 async def evaluate_dialog_response(request: dict):
     """
-    Avalia a resposta do usuário em um diálogo.
+    Avalia a resposta do usuário em um diálogo interativo.
     Compara com a resposta esperada e retorna score + feedback.
     """
     user_response = request.get("user_response", "").strip()
@@ -923,78 +755,178 @@ async def evaluate_dialog_response(request: dict):
     theme = request.get("theme", "")
     
     if not user_response or not expected_response:
-        raise HTTPException(status_code=400, detail="user_response e expected_response são obrigatórios")
+        raise HTTPException(
+            status_code=400, 
+            detail="user_response e expected_response são obrigatórios"
+        )
     
     try:
-        # Usa o tutor IA para avaliação inteligente
-        from ..llm.tutor import tutor
+        from difflib import SequenceMatcher
         
-        prompt = f"""Avalie a resposta do aluno em um diálogo de {theme}.
-
-        Resposta esperada: "{expected_response}"
-        Resposta do aluno: "{user_response}"
-
-        Avalie de 0 a 100 considerando:
-        - Compreensão do contexto (40%)
-        - Gramática correta (30%)
-        - Vocabulário adequado (30%)
-
-        Responda APENAS com um JSON:
-        {{"score": 85, "feedback": "✅ Boa resposta! Pequeno ajuste na gramática.", "correction": "expected_response"}}"""
-
-        ollama_status = await tutor._check_ollama()
+        user_clean = user_response.lower().strip().rstrip('.!?,')
+        expected_clean = expected_response.lower().strip().rstrip('.!?,')
         
-        if ollama_status.get("running"):
-            # Usa Ollama para avaliação
-            feedback = await tutor.generate_feedback(
-                expected=expected_response,
-                actual=user_response,
-                errors=[],
-                pronunciation_score=50  # placeholder
-            )
-            
-            # Calcula score baseado na similaridade
-            from difflib import SequenceMatcher
-            similarity = SequenceMatcher(None, user_response.lower(), expected_response.lower()).ratio()
-            score = round(similarity * 100)
-            
-            return JSONResponse({
-                "success": True,
-                "score": score,
-                "feedback": "✅ Muito bem!" if score >= 80 else "⚠️ Quase lá!" if score >= 50 else "💪 Continue tentando!",
-                "correct_answer": expected_response,
-                "similarity": round(similarity, 3)
-            })
+        similarity = SequenceMatcher(None, user_clean, expected_clean).ratio()
+        
+        user_words = set(user_clean.split())
+        expected_words = set(expected_clean.split())
+        
+        if expected_words:
+            word_similarity = len(user_words & expected_words) / len(expected_words)
         else:
-            # Fallback offline
-            from difflib import SequenceMatcher
-            similarity = SequenceMatcher(None, user_response.lower(), expected_response.lower()).ratio()
-            score = round(similarity * 100)
-            
-            return JSONResponse({
-                "success": True,
-                "score": score,
-                "feedback": "✅ Boa resposta!" if score >= 80 else "⚠️ Quase!" if score >= 50 else "❌ Tente novamente!",
-                "correct_answer": expected_response,
-                "similarity": round(similarity, 3)
-            })
-            
+            word_similarity = 0
+        
+        score = round((similarity * 0.6 + word_similarity * 0.4) * 100)
+        
+        if score >= 90:
+            feedback = "✅ Perfeito! Resposta excelente!"
+        elif score >= 75:
+            feedback = "✅ Muito bem! Quase perfeito."
+        elif score >= 60:
+            feedback = "⚠️ Boa tentativa! Mas pode melhorar."
+        elif score >= 40:
+            feedback = "💪 Continue tentando! Veja a resposta esperada."
+        else:
+            feedback = "❌ Resposta muito diferente. Estude o exemplo."
+        
+        return JSONResponse({
+            "success": True,
+            "score": score,
+            "feedback": feedback,
+            "correct_answer": expected_response,
+            "user_answer": user_response,
+            "similarity": round(similarity, 3),
+            "word_similarity": round(word_similarity, 3),
+            "theme": theme
+        })
+        
     except Exception as e:
-        logger.error(f"Erro ao avaliar diálogo: {e}")
-        raise HTTPException(status_code=500, detail="Erro na avaliação")
+        logger.error(f"Erro ao avaliar resposta do diálogo: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao avaliar resposta")
+
+
+@app.post("/api/dialogs/free-chat")
+async def free_chat(request: dict):
+    """
+    Modo de conversa livre com o tutor IA.
+    O usuário digita qualquer coisa e a IA responde como um nativo.
+    
+    Request Body:
+    {
+        "message": "I'd like to order a pizza",
+        "context": "restaurant",
+        "history": [
+            {"role": "assistant", "text": "Welcome! What can I get for you?"},
+            {"role": "user", "text": "Hi, I'm hungry"}
+        ]
+    }
+    """
+    message = request.get("message", "").strip()
+    context = request.get("context", "casual conversation")
+    history = request.get("history", [])
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Mensagem é obrigatória")
+    
+    if len(message) > 200:
+        raise HTTPException(status_code=400, detail="Mensagem muito longa (máx. 200 caracteres)")
+    
+    logger.info(f"Free chat: contexto='{context}', mensagem='{message[:50]}...'")
+    
+    try:
+        history_text = ""
+        for msg in history[-10:]:
+            role = "Native speaker" if msg.get("role") == "assistant" else "Student"
+            history_text += f"{role}: {msg.get('text', '')}\n"
+        
+        prompt = f"""You are a native English speaker in a {context} situation.
+You're talking to someone learning English. Be natural, friendly, and helpful.
+
+CONVERSATION HISTORY:
+{history_text}
+Student: {message}
+
+RULES:
+1. Respond ONLY in English (natural, conversational)
+2. Keep responses under 20 words
+3. If the student makes a grammar mistake, subtly use the correct form in your response
+4. Ask follow-up questions to keep the conversation going
+5. Occasionally offer a tip about more natural phrasing
+
+Respond with ONLY a JSON (no other text):
+{{"response": "Your natural English response", "translation": "Brazilian Portuguese translation", "tip": "Optional tip about natural English or empty string"}}"""
+        
+        import aiohttp
+        
+        async with aiohttp.ClientSession() as session:
+            payload = {
+                "model": "qwen2.5-coder:3b",
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.8,
+                    "num_predict": 200,
+                    "top_p": 0.95
+                }
+            }
+            
+            async with session.post(
+                "http://localhost:11434/api/generate",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=20)
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    response_text = result.get("response", "")
+                    
+                    try:
+                        start = response_text.find('{')
+                        end = response_text.rfind('}') + 1
+                        if start >= 0 and end > start:
+                            data = json.loads(response_text[start:end])
+                            return JSONResponse({
+                                "success": True,
+                                "response": data.get("response", response_text[:200]),
+                                "translation": data.get("translation", ""),
+                                "tip": data.get("tip", ""),
+                                "context": context
+                            })
+                    except json.JSONDecodeError:
+                        pass
+                    
+                    return JSONResponse({
+                        "success": True,
+                        "response": response_text.strip()[:200],
+                        "translation": "",
+                        "tip": "",
+                        "context": context
+                    })
+                else:
+                    logger.error(f"Ollama retornou status {response.status}")
+                    
+    except aiohttp.ClientError as e:
+        logger.error(f"Erro de conexão com Ollama: {e}")
+    except Exception as e:
+        logger.error(f"Erro no free-chat: {e}")
+    
+    return JSONResponse({
+        "success": True,
+        "response": f"I understand you're talking about {context}. Could you tell me more?",
+        "translation": f"Entendo que você está falando sobre {context}. Pode me contar mais?",
+        "tip": "",
+        "context": context,
+        "offline_fallback": True
+    })
+
 
 # ============================================================
-# ENDPOINTS - CONQUISTAS (NOVO)
+# ENDPOINTS - CONQUISTAS
 # ============================================================
 
 @app.get("/api/user/achievements")
-async def get_user_achievements(
-    user_id: str = Query("default")
-):
-    """
-    Retorna todas as conquistas e progresso do usuário.
-    """
-    if not FEATURE_FLAGS["achievements"]:
+async def get_user_achievements(user_id: str = Query("default")):
+    """Retorna todas as conquistas e progresso do usuário."""
+    if not FEATURE_FLAGS.get("achievements", True):
         raise HTTPException(status_code=404, detail="Conquistas desabilitadas")
     
     try:
@@ -1022,15 +954,12 @@ async def get_user_achievements(
 
 
 # ============================================================
-# ENDPOINTS - UTILITÁRIOS (NOVO)
+# ENDPOINTS - UTILITÁRIOS
 # ============================================================
 
 @app.get("/api/stats/database")
 async def get_database_stats():
-    """
-    Retorna estatísticas do banco de dados.
-    Útil para monitoramento e debugging.
-    """
+    """Retorna estatísticas do banco de dados."""
     try:
         from ..data.database import db
         
