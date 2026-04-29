@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Teacher Agent</title>
+    <title>English Teacher Agent v4.0</title>
     <style>
         :root {
             --primary: #667eea;
@@ -13,683 +13,625 @@
             --danger: #dc3545;
             --light: #f8f9fa;
             --dark: #333;
+            --bg: #f0f2f5;
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: var(--bg);
             min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
         
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: slideUp 0.5s ease;
-        }
-        
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
+        /* Header */
         .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            color: var(--primary);
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-        
-        .header .status {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px 20px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #666;
-            font-size: 0.9em;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success);
+        .header h1 { font-size: 1.4em; display: flex; align-items: center; gap: 10px; }
+        .header-stats { display: flex; gap: 20px; font-size: 0.9em; }
+        .header-stat { text-align: center; }
+        .header-stat .value { font-weight: bold; font-size: 1.1em; }
+        .header-stat .label { font-size: 0.75em; opacity: 0.8; }
+        
+        /* Layout Principal */
+        .main-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 15px;
         }
         
-        .status-dot.offline {
-            background: var(--danger);
-        }
-        
-        .phrase-card {
-            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-            border-radius: 16px;
-            padding: 25px;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        
-        .phrase-text {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--dark);
-            margin-bottom: 8px;
-        }
-        
-        .phrase-phonetic {
-            font-family: 'Courier New', monospace;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .controls {
+        /* Abas de Navegação */
+        .nav-tabs {
             display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
+            gap: 5px;
+            background: white;
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         
-        .btn {
-            padding: 12px 28px;
-            font-size: 16px;
+        .nav-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
             border: none;
-            border-radius: 50px;
+            background: transparent;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            color: #666;
         }
         
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        .nav-tab:hover { background: #f0f0f0; }
+        .nav-tab.active { background: var(--primary); color: white; }
+        
+        /* Grid de Categorias */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .btn-record {
-            background: var(--success);
-            color: white;
-        }
-        
-        .btn-record.recording {
-            background: var(--danger);
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
-            50% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
-        }
-        
-        .btn-play {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .btn-next {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .progress {
-            margin-bottom: 25px;
-            display: none;
-        }
-        
-        .progress-bar {
-            height: 4px;
-            background: #e9ecef;
-            border-radius: 2px;
+        .category-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 3px solid transparent;
+            position: relative;
             overflow: hidden;
         }
         
-        .progress-fill {
-            height: 100%;
-            background: var(--primary);
-            width: 0%;
-            transition: width 0.3s;
+        .category-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
         
-        .progress-text {
+        .category-card.selected { border-color: var(--primary); }
+        .category-card .icon { font-size: 2.5em; margin-bottom: 8px; }
+        .category-card .name { font-weight: 600; font-size: 0.95em; margin-bottom: 5px; }
+        .category-card .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .category-card .progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.5s;
+        }
+        
+        /* Card de Estudo */
+        .study-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .study-card.active { display: block; }
+        
+        .word-display {
             text-align: center;
-            font-size: 14px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #f5f7fa, #e8ecf1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .word-english {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .word-phonetic {
+            font-family: 'Courier New', monospace;
+            color: #888;
+            font-size: 1.1em;
+            margin: 8px 0;
+        }
+        
+        .word-translation {
+            font-size: 1.2em;
             color: #666;
             margin-top: 8px;
         }
         
-        .result {
-            display: none;
-            animation: fadeIn 0.5s ease;
+        .word-example {
+            font-style: italic;
+            color: #999;
+            margin-top: 10px;
+            font-size: 0.95em;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        /* Botões */
+        .btn {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .score-section {
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-record { background: var(--success); color: white; }
+        .btn-record.recording { background: var(--danger); animation: pulse 1.5s infinite; }
+        .btn-listen { background: #17a2b8; color: white; }
+        .btn-next { background: var(--warning); color: var(--dark); }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(220,53,69,0); }
+        }
+        
+        /* Score */
+        .score-display {
             text-align: center;
-            margin-bottom: 20px;
+            padding: 20px;
+            display: none;
         }
         
         .score-circle {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 1.8em;
             font-weight: bold;
             color: white;
-            margin-bottom: 10px;
         }
         
         .score-high { background: var(--success); }
         .score-medium { background: var(--warning); color: var(--dark); }
         .score-low { background: var(--danger); }
         
-        .transcription-box {
-            background: #e3f2fd;
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            font-family: monospace;
-            font-size: 15px;
-        }
-        
-        .word-scores {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        /* Modo Diálogo */
+        .dialog-container {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 20px;
             margin-bottom: 20px;
-            justify-content: center;
         }
         
-        .word-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-            animation: popIn 0.3s ease;
+        .dialog-line {
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 10px;
+            animation: fadeIn 0.5s;
         }
         
-        @keyframes popIn {
-            from { transform: scale(0); }
-            to { transform: scale(1); }
+        .dialog-line.role-a {
+            background: #e3f2fd;
+            margin-right: 40px;
+            text-align: left;
         }
         
-        .word-good { background: #d4edda; color: #155724; }
-        .word-ok { background: #fff3cd; color: #856404; }
-        .word-poor { background: #f8d7da; color: #721c24; }
-        
-        .feedback-section {
-            display: grid;
-            gap: 10px;
+        .dialog-line.role-b {
+            background: #f3e5f5;
+            margin-left: 40px;
+            text-align: right;
         }
         
-        .feedback-card {
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 15px;
-            line-height: 1.5;
+        .dialog-line .speaker {
+            font-weight: bold;
+            font-size: 0.8em;
+            opacity: 0.7;
         }
         
-        .feedback-correction {
-            background: #d4edda;
-            border-left: 4px solid var(--success);
-            color: #155724;
+        .dialog-line .line-text { font-size: 1.1em; margin: 5px 0; }
+        .dialog-line .translation { font-size: 0.9em; opacity: 0.6; font-style: italic; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .feedback-tip {
-            background: #fff3cd;
-            border-left: 4px solid var(--warning);
-            color: #856404;
-        }
-        
-        .feedback-exercise {
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
-            color: #0c5460;
-        }
-        
-        .timer {
-            text-align: center;
-            font-size: 14px;
-            color: #999;
-            margin-top: 20px;
-        }
-        
+        /* Responsivo */
         @media (max-width: 600px) {
-            .container {
-                padding: 20px;
-            }
-            
-            .phrase-text {
-                font-size: 20px;
-            }
-            
-            .btn {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
+            .categories-grid { grid-template-columns: repeat(2, 1fr); }
+            .word-english { font-size: 1.8em; }
+            .header-stats { gap: 10px; font-size: 0.8em; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎧 English Teacher</h1>
-            <div class="status">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Conectando...</span>
+    <div class="header">
+        <h1>🎧 English Teacher</h1>
+        <div class="header-stats">
+            <div class="header-stat">
+                <div class="value" id="streakCount">0</div>
+                <div class="label">Dias 🔥</div>
+            </div>
+            <div class="header-stat">
+                <div class="value" id="xpCount">0</div>
+                <div class="label">XP ⭐</div>
+            </div>
+            <div class="header-stat">
+                <div class="value" id="levelDisplay">🌱 1</div>
+                <div class="label">Nível</div>
             </div>
         </div>
-        
-        <div class="phrase-card">
-            <div class="phrase-text" id="phraseText">Carregando frase...</div>
-            <div class="phrase-phonetic" id="phoneticText"></div>
+    </div>
+    
+    <div class="main-container">
+        <!-- Abas -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('vocabulary')">📖 Vocabulário</button>
+            <button class="nav-tab" onclick="switchTab('dialogs')">🗣️ Diálogos</button>
+            <button class="nav-tab" onclick="switchTab('pronunciation')">🎤 Pronúncia</button>
         </div>
         
-        <div class="controls">
-            <button class="btn btn-record" id="recordBtn" onclick="toggleRecording()">
-                <span>🎤</span> Gravar
-            </button>
-            <button class="btn btn-play" id="playBtn" onclick="playModel()" disabled>
-                <span>🔊</span> Ouvir
-            </button>
-            <button class="btn btn-next" id="nextBtn" onclick="nextPhrase()" disabled>
-                <span>➡️</span> Próxima
-            </button>
-        </div>
+        <!-- Grid de Categorias -->
+        <div class="categories-grid" id="categoriesGrid"></div>
         
-        <div class="progress" id="progress">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <div class="progress-text" id="progressText">Processando...</div>
-        </div>
-        
-        <div class="result" id="result">
-            <div class="score-section">
-                <div class="score-circle" id="scoreCircle">75</div>
-            </div>
-            
-            <div class="transcription-box" id="transcriptionBox" style="display:none;">
-                <strong>🎤 Você disse:</strong><br>
-                <span id="transcriptionText"></span>
+        <!-- Card de Estudo de Vocabulário -->
+        <div class="study-card" id="vocabularyCard">
+            <div class="word-display">
+                <div class="word-english" id="wordEnglish">Dog</div>
+                <div class="word-phonetic" id="wordPhonetic">/dɔɡ/</div>
+                <div class="word-translation" id="wordTranslation">cachorro</div>
+                <div class="word-example" id="wordExample">"The dog is playing in the park."</div>
             </div>
             
-            <div class="word-scores" id="wordScores"></div>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <button class="btn btn-listen" onclick="playAudio()">🔊 Ouvir</button>
+            </div>
             
-            <div class="feedback-section" id="feedbackSection"></div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-record" id="recordBtn" onclick="toggleRecording()">🎤 Gravar</button>
+                <button class="btn btn-next" onclick="nextWord()">⏭️ Pular</button>
+            </div>
+            
+            <div class="score-display" id="scoreDisplay">
+                <div class="score-circle score-medium" id="scoreCircle">75</div>
+                <p style="margin-top: 10px; color: #666;" id="scoreText"></p>
+            </div>
         </div>
         
-        <div class="timer" id="timer"></div>
+        <!-- Card de Diálogo -->
+        <div class="study-card" id="dialogCard">
+            <div class="dialog-container" id="dialogContainer"></div>
+            <div style="text-align: center;">
+                <button class="btn btn-record" id="dialogRecordBtn" onclick="toggleDialogRecording()">🎤 Responder</button>
+            </div>
+        </div>
+        
+        <!-- Card de Pronúncia (original) -->
+        <div class="study-card" id="pronunciationCard">
+            <div class="phrase-box" style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:1.3em; font-weight:bold;" id="phraseText">The quick brown fox jumps over the lazy dog</div>
+                <div style="color:#888; font-family:monospace;" id="phoneticText">/ðə kwɪk braʊn fɑks dʒʌmps ˈoʊvər ðə ˈleɪzi dɔɡ/</div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn btn-record" id="phraseRecordBtn" onclick="togglePhraseRecording()">🎤 Gravar</button>
+                <button class="btn btn-listen" onclick="playPhraseAudio()">🔊 Ouvir</button>
+            </div>
+            <div class="score-display" id="phraseScoreDisplay">
+                <div class="score-circle score-medium" id="phraseScoreCircle">75</div>
+            </div>
+        </div>
     </div>
     
     <script>
-        // Configuração
-        const API_URL = window.location.origin;
-        let sessionId = null;
+        // Estado global
+        let currentTab = 'vocabulary';
+        let selectedCategory = null;
+        let currentWords = [];
+        let currentWordIndex = 0;
         let mediaRecorder = null;
         let audioChunks = [];
-        let recordingTimer = null;
-        let recordingSeconds = 0;
-        
-        // Frases de exemplo
-        const phrases = [
-            {
-                text: "The quick brown fox jumps over the lazy dog",
-                phonetic: "/ðə kwɪk braʊn fɑks dʒʌmps ˈoʊvər ðə ˈleɪzi dɔɡ/"
-            },
-            {
-                text: "She sells seashells by the seashore",
-                phonetic: "/ʃi sɛlz ˈsiːʃɛlz baɪ ðə ˈsiːʃɔːr/"
-            },
-            {
-                text: "How much wood would a woodchuck chuck",
-                phonetic: "/haʊ mʌtʃ wʊd wʊd ə ˈwʊdˌtʃʌk tʃʌk/"
-            }
-        ];
-        
-        let currentPhraseIndex = 0;
+        let sessionWords = [];
+        let sessionStartTime = 0;
         
         // Inicialização
         async function init() {
-            await checkHealth();
-            loadPhrase(0);
+            await loadCategories();
+            await loadUserStats();
         }
         
-        async function checkHealth() {
+        async function loadCategories() {
             try {
-                const response = await fetch(`${API_URL}/api/health`);
+                const response = await fetch('/api/categories');
                 const data = await response.json();
                 
-                if (data.status === 'ok') {
-                    document.getElementById('statusDot').classList.remove('offline');
-                    document.getElementById('statusText').textContent = 'Online - Pronto';
-                }
+                const grid = document.getElementById('categoriesGrid');
+                grid.innerHTML = data.categories.map(cat => `
+                    <div class="category-card" onclick="selectCategory(${cat.id}, '${cat.name}')" data-cat-id="${cat.id}">
+                        <div class="icon">${cat.icon}</div>
+                        <div class="name">${cat.name}</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${cat.total_words > 0 ? (cat.mastered_words / cat.total_words * 100) : 0}%"></div>
+                        </div>
+                        <small style="color:#888;">${cat.mastered_words}/${cat.total_words}</small>
+                    </div>
+                `).join('');
             } catch (e) {
-                document.getElementById('statusDot').classList.add('offline');
-                document.getElementById('statusText').textContent = 'Offline';
+                console.error('Erro ao carregar categorias:', e);
             }
         }
         
-        function loadPhrase(index) {
-            const phrase = phrases[index];
-            document.getElementById('phraseText').textContent = phrase.text;
-            document.getElementById('phoneticText').textContent = phrase.phonetic;
-            document.getElementById('playBtn').disabled = false;
-            document.getElementById('nextBtn').disabled = true;
-            document.getElementById('result').style.display = 'none';
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/user/stats');
+                const data = await response.json();
+                
+                document.getElementById('streakCount').textContent = data.streak?.current_streak || 0;
+                document.getElementById('xpCount').textContent = data.stats?.total_words_practiced * 10 || 0;
+            } catch (e) {
+                console.error('Erro ao carregar stats:', e);
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.nav-tab:${tab === 'vocabulary' ? 'first' : tab === 'dialogs' ? 'nth' : 'last'}-child`).classList.add('active');
+            
+            document.querySelectorAll('.nav-tab').forEach((t, i) => {
+                t.classList.toggle('active', 
+                    (tab === 'vocabulary' && i === 0) ||
+                    (tab === 'dialogs' && i === 1) ||
+                    (tab === 'pronunciation' && i === 2)
+                );
+            });
+            
+            document.getElementById('vocabularyCard').classList.toggle('active', tab === 'vocabulary');
+            document.getElementById('dialogCard').classList.toggle('active', tab === 'dialogs');
+            document.getElementById('pronunciationCard').classList.toggle('active', tab === 'pronunciation');
+            
+            document.getElementById('categoriesGrid').style.display = tab !== 'pronunciation' ? 'grid' : 'none';
+        }
+        
+        async function selectCategory(categoryId, categoryName) {
+            selectedCategory = categoryId;
+            
+            // Destaca card selecionado
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            document.querySelector(`[data-cat-id="${categoryId}"]`)?.classList.add('selected');
+            
+            if (currentTab === 'vocabulary') {
+                await loadWords(categoryId);
+            } else if (currentTab === 'dialogs') {
+                await loadDialogs(categoryName);
+            }
+        }
+        
+        async function loadWords(categoryId) {
+            try {
+                const response = await fetch(`/api/categories/${categoryId}/words?limit=10&mode=new`);
+                const data = await response.json();
+                
+                currentWords = data.words;
+                currentWordIndex = 0;
+                sessionWords = [];
+                sessionStartTime = Date.now();
+                
+                if (currentWords.length > 0) {
+                    displayWord(currentWords[0]);
+                    document.getElementById('vocabularyCard').classList.add('active');
+                    document.getElementById('scoreDisplay').style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Erro ao carregar palavras:', e);
+            }
+        }
+        
+        function displayWord(word) {
+            document.getElementById('wordEnglish').textContent = word.english;
+            document.getElementById('wordPhonetic').textContent = word.phonetic || '';
+            document.getElementById('wordTranslation').textContent = word.portuguese;
+            document.getElementById('wordExample').textContent = word.example_sentence ? `"${word.example_sentence}"` : '';
+            document.getElementById('scoreDisplay').style.display = 'none';
+        }
+        
+        function nextWord() {
+            currentWordIndex++;
+            if (currentWordIndex >= currentWords.length) {
+                completeSession();
+                return;
+            }
+            displayWord(currentWords[currentWordIndex]);
+            document.getElementById('scoreDisplay').style.display = 'none';
+        }
+        
+        async function completeSession() {
+            const duration = Math.floor((Date.now() - sessionStartTime) / 1000);
+            
+            try {
+                await fetch('/api/study/session/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        theme: selectedCategory,
+                        mode: 'vocabulary',
+                        words: sessionWords,
+                        duration: duration
+                    })
+                });
+                
+                alert(`🎉 Sessão concluída!\nPalavras praticadas: ${sessionWords.length}\nContinue assim!`);
+                await loadCategories();
+                await loadUserStats();
+                selectedCategory = null;
+                document.getElementById('vocabularyCard').classList.remove('active');
+            } catch (e) {
+                console.error('Erro ao finalizar sessão:', e);
+            }
         }
         
         async function toggleRecording() {
             const btn = document.getElementById('recordBtn');
             
             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                // Parar gravação
                 stopRecording();
             } else {
-                // Iniciar gravação
                 await startRecording();
             }
         }
         
         async function startRecording() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        sampleRate: 16000,
-                        channelCount: 1,
-                        echoCancellation: true,
-                        noiseSuppression: true
-                    } 
-                });
-                
-                mediaRecorder = new MediaRecorder(stream, { 
-                    mimeType: 'audio/webm' 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 audioChunks = [];
                 
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
-                };
-                
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
                 mediaRecorder.onstop = async () => {
-                    stream.getTracks().forEach(track => track.stop());
-                    
+                    stream.getTracks().forEach(t => t.stop());
                     if (audioChunks.length > 0) {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        await processAudio(audioBlob);
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        await processRecording(blob);
                     }
-                    
-                    // Reset UI
                     document.getElementById('recordBtn').classList.remove('recording');
-                    document.getElementById('recordBtn').innerHTML = '<span>🎤</span> Gravar';
+                    document.getElementById('recordBtn').textContent = '🎤 Gravar';
                 };
                 
                 mediaRecorder.start();
-                
-                // UI update
                 document.getElementById('recordBtn').classList.add('recording');
-                document.getElementById('recordBtn').innerHTML = '<span>⏹</span> Parar (10s)';
-                document.getElementById('result').style.display = 'none';
+                document.getElementById('recordBtn').textContent = '⏹️ Parar';
                 
-                // Auto-stop após 10 segundos
-                recordingSeconds = 0;
-                updateTimer();
-                recordingTimer = setInterval(updateTimer, 1000);
-                
-                setTimeout(() => {
-                    if (mediaRecorder && mediaRecorder.state === 'recording') {
-                        stopRecording();
-                    }
-                }, 10000);
-                
-            } catch (error) {
-                alert('Erro ao acessar microfone: ' + error.message);
-                console.error(error);
+                setTimeout(() => { if (mediaRecorder?.state === 'recording') stopRecording(); }, 8000);
+            } catch (e) {
+                alert('Erro ao acessar microfone: ' + e.message);
             }
         }
         
         function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-            }
-            if (recordingTimer) {
-                clearInterval(recordingTimer);
-            }
+            if (mediaRecorder?.state === 'recording') mediaRecorder.stop();
         }
         
-        function updateTimer() {
-            recordingSeconds++;
-            const remaining = 10 - recordingSeconds;
-            document.getElementById('timer').textContent = `${remaining}s restantes`;
-        }
-        
-        async function processAudio(audioBlob) {
-            const progress = document.getElementById('progress');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-            
-            progress.style.display = 'block';
-            
-            // Se não tem sessão, cria uma
-            if (!sessionId) {
-                const sessionResponse = await fetch(`${API_URL}/api/session`, {
-                    method: 'POST'
-                });
-                const sessionData = await sessionResponse.json();
-                sessionId = sessionData.session_id;
-            }
-            
+        async function processRecording(audioBlob) {
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
-            formData.append('expected', phrases[currentPhraseIndex].text);
-            formData.append('session_id', sessionId);
+            formData.append('expected', currentWords[currentWordIndex].english);
             
             try {
-                // Simular progresso
-                let progressValue = 0;
-                const progressInterval = setInterval(() => {
-                    progressValue += 10;
-                    if (progressValue > 90) progressValue = 90;
-                    progressFill.style.width = progressValue + '%';
-                    progressText.textContent = getProgressText(progressValue);
-                }, 300);
-                
-                const response = await fetch(`${API_URL}/api/analyze`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                progressText.textContent = 'Concluído!';
-                
+                const response = await fetch('/api/analyze', { method: 'POST', body: formData });
                 const result = await response.json();
                 
-                setTimeout(() => {
-                    progress.style.display = 'none';
-                    if (result.success) {
-                        displayResult(result);
-                    } else {
-                        alert('Erro na análise: ' + result.error);
-                    }
-                }, 500);
-                
-            } catch (error) {
-                progress.style.display = 'none';
-                alert('Erro na comunicação: ' + error.message);
-                console.error(error);
-            }
-        }
-        
-        function getProgressText(value) {
-            if (value < 30) return 'Transcrevendo...';
-            if (value < 60) return 'Analisando pronúncia...';
-            if (value < 90) return 'Gerando feedback...';
-            return 'Finalizando...';
-        }
-        
-        function displayResult(data) {
-            const result = document.getElementById('result');
-            result.style.display = 'block';
-            
-            // Score
-            const score = Math.round(data.pronunciation_score || 0);
-            const scoreCircle = document.getElementById('scoreCircle');
-            scoreCircle.textContent = score;
-            scoreCircle.className = 'score-circle';
-            
-            if (score >= 80) scoreCircle.classList.add('score-high');
-            else if (score >= 60) scoreCircle.classList.add('score-medium');
-            else scoreCircle.classList.add('score-low');
-            
-            // Transcrição
-            const transBox = document.getElementById('transcriptionBox');
-            const transText = document.getElementById('transcriptionText');
-            if (data.transcription && data.transcription !== '[Não foi possível transcrever]') {
-                transBox.style.display = 'block';
-                transText.textContent = `"${data.transcription}"`;
-            } else {
-                transBox.style.display = 'none';
-            }
-            
-            // Scores por palavra
-            const wordScores = document.getElementById('wordScores');
-            wordScores.innerHTML = '';
-            if (data.word_scores && Object.keys(data.word_scores).length > 0) {
-                wordScores.innerHTML += '<strong style="width:100%;text-align:center;">📊 Por palavra:</strong>';
-                for (const [word, wordScore] of Object.entries(data.word_scores)) {
-                    const badge = document.createElement('span');
-                    badge.className = 'word-badge';
-                    badge.textContent = `${word}: ${Math.round(wordScore)}`;
+                if (result.success) {
+                    displayScore(result);
                     
-                    if (wordScore >= 80) badge.classList.add('word-good');
-                    else if (wordScore >= 60) badge.classList.add('word-ok');
-                    else badge.classList.add('word-poor');
+                    // Registra no progresso
+                    const wordId = currentWords[currentWordIndex].id;
+                    const progressResponse = await fetch('/api/study/word', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            word_id: wordId,
+                            score: result.pronunciation_score
+                        })
+                    });
+                    const progressData = await progressResponse.json();
                     
-                    wordScores.appendChild(badge);
+                    sessionWords.push({
+                        word_id: wordId,
+                        score: result.pronunciation_score,
+                        xp_earned: progressData.xp_earned
+                    });
+                    
+                    // Atualiza XP e streak no header
+                    document.getElementById('xpCount').textContent = 
+                        parseInt(document.getElementById('xpCount').textContent) + progressData.xp_earned;
+                    document.getElementById('streakCount').textContent = 
+                        progressData.streak?.current_streak || 0;
                 }
+            } catch (e) {
+                console.error('Erro:', e);
             }
-            
-            // Feedback
-            const feedbackSection = document.getElementById('feedbackSection');
-            feedbackSection.innerHTML = '';
-            
-            if (data.feedback) {
-                if (data.feedback.correction) {
-                    feedbackSection.innerHTML += `
-                        <div class="feedback-card feedback-correction">
-                            <strong>✅ Correção:</strong><br>
-                            ${data.feedback.correction}
-                        </div>
-                    `;
-                }
-                
-                if (data.feedback.tip) {
-                    feedbackSection.innerHTML += `
-                        <div class="feedback-card feedback-tip">
-                            <strong>💡 Dica:</strong><br>
-                            ${data.feedback.tip}
-                        </div>
-                    `;
-                }
-                
-                if (data.feedback.exercise) {
-                    feedbackSection.innerHTML += `
-                        <div class="feedback-card feedback-exercise">
-                            <strong>📝 Exercício:</strong><br>
-                            ${data.feedback.exercise}
-                        </div>
-                    `;
-                }
-            }
-            
-            // Habilita botão próximo se score for bom
-            if (score >= 60) {
-                document.getElementById('nextBtn').disabled = false;
-            }
-            
-            // Scroll suave para o resultado
-            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        function nextPhrase() {
-            currentPhraseIndex = (currentPhraseIndex + 1) % phrases.length;
-            loadPhrase(currentPhraseIndex);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        function displayScore(result) {
+            const display = document.getElementById('scoreDisplay');
+            const circle = document.getElementById('scoreCircle');
+            const text = document.getElementById('scoreText');
+            
+            display.style.display = 'block';
+            
+            const score = Math.round(result.pronunciation_score || 0);
+            circle.textContent = score;
+            circle.className = 'score-circle ' + 
+                (score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low');
+            
+            text.textContent = result.feedback?.correction || 
+                (score >= 80 ? '✅ Muito bem!' : score >= 60 ? '👍 Continue!' : '💪 Tente novamente!');
         }
         
-        async function playModel() {
-            const text = phrases[currentPhraseIndex].text;
+        async function playAudio() {
+            const text = currentWords[currentWordIndex]?.english;
+            if (!text) return;
+            
             try {
-                const response = await fetch(`${API_URL}/api/speak`, {
+                const response = await fetch('/api/speak', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text })
                 });
-                
                 if (response.ok) {
                     const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const audio = new Audio(url);
-                    await audio.play();
-                    URL.revokeObjectURL(url);
-                } else {
-                    console.warn('TTS não disponível');
+                    new Audio(URL.createObjectURL(blob)).play();
                 }
-            } catch (error) {
-                console.warn('TTS error:', error);
+            } catch (e) {
+                console.log('TTS não disponível');
             }
         }
         
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
-                e.preventDefault();
-                toggleRecording();
-            } else if (e.code === 'ArrowRight') {
-                nextPhrase();
-            } else if (e.code === 'KeyP') {
-                playModel();
+        async function loadDialogs(theme) {
+            try {
+                const response = await fetch(`/api/dialogs/${theme}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('dialogContainer');
+                container.innerHTML = data.dialogs.map(d => `
+                    <div class="dialog-line ${d.role.includes('Atendente') || d.role.includes('Garçom') || d.role.includes('Recepcionista') ? 'role-a' : 'role-b'}">
+                        <div class="speaker">${d.role}</div>
+                        <div class="line-text">${d.line}</div>
+                        <div class="translation">${d.translation}</div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('dialogCard').classList.add('active');
+            } catch (e) {
+                console.error('Erro ao carregar diálogos:', e);
             }
-        });
+        }
         
-        // Iniciar
+        // Inicializa
         init();
     </script>
 </body>
