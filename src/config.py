@@ -210,53 +210,47 @@ STUDY_CONFIG: Dict[str, Any] = {
     "review_threshold": float(os.getenv("STUDY_REVIEW_THRESHOLD", "60")),
     "max_words_per_review": int(os.getenv("STUDY_MAX_REVIEW_WORDS", "20")),
     "new_words_vs_review_ratio": float(os.getenv("STUDY_NEW_VS_REVIEW", "0.7")),
-    "pronunciation_practice_phrases": [
-        {
-            "text": "The quick brown fox jumps over the lazy dog",
-            "phonetic": "/ðə kwɪk braʊn fɑks dʒʌmps ˈoʊvər ðə ˈleɪzi dɔɡ/",
-            "difficulty": "medium",
-            "focus": "consonant_clusters"
-        },
-        {
-            "text": "She sells seashells by the seashore",
-            "phonetic": "/ʃi sɛlz ˈsiːʃɛlz baɪ ðə ˈsiːʃɔːr/",
-            "difficulty": "hard",
-            "focus": "sibilants"
-        },
-        {
-            "text": "I think three thin things",
-            "phonetic": "/aɪ θɪŋk θri θɪn θɪŋz/",
-            "difficulty": "medium",
-            "focus": "th_sound"
-        },
-        {
-            "text": "Peter Piper picked a peck of pickled peppers",
-            "phonetic": "/ˈpiːtər ˈpaɪpər pɪkt ə pɛk əv ˈpɪkəld ˈpɛpərz/",
-            "difficulty": "hard",
-            "focus": "p_sound"
-        },
-        {
-            "text": "Hello, how are you today?",
-            "phonetic": "/həˈloʊ, haʊ ɑːr juː təˈdeɪ?/",
-            "difficulty": "easy",
-            "focus": "greetings"
-        },
-        {
-            "text": "What time does the train leave?",
-            "phonetic": "/wʌt taɪm dʌz ðə treɪn liːv?/",
-            "difficulty": "easy",
-            "focus": "questions"
-        },
-        {
-            "text": "I would like a cup of coffee please",
-            "phonetic": "/aɪ wʊd laɪk ə kʌp əv ˈkɔːfi pliːz/",
-            "difficulty": "easy",
-            "focus": "requests"
-        },
-    ],
-}
-
-
+        "pronunciation_phrases": {
+        "beginner": [
+            {"text": "Hello, how are you today?", "phonetic": "/həˈloʊ, haʊ ɑːr juː təˈdeɪ?/", "focus": "greetings", "tip": "O 'h' de hello é suave, quase mudo"},
+            {"text": "My name is John.", "phonetic": "/maɪ neɪm ɪz dʒɑːn/", "focus": "introductions", "tip": "O 'y' de my parece 'ai' em português"},
+            {"text": "Where is the bathroom?", "phonetic": "/wer ɪz ðə ˈbæθ.ruːm?/", "focus": "questions", "tip": "O 'th' de bathroom: língua entre os dentes"},
+            {"text": "I would like a coffee please.", "phonetic": "/aɪ wʊd laɪk ə ˈkɔː.fi pliːz/", "focus": "requests", "tip": "'Would' não pronuncia o 'l'"},
+            {"text": "What time is it?", "phonetic": "/wʌt taɪm ɪz ɪt?/", "focus": "time", "tip": "O 't' de what é mudo nessa frase"},
+            {"text": "How much does this cost?", "phonetic": "/haʊ mʌtʃ dʌz ðɪs kɔːst?/", "focus": "shopping", "tip": "'Much' tem som de 'tch' no final"},
+            {"text": "Can you help me please?", "phonetic": "/kæn juː help miː pliːz?/", "focus": "help", "tip": "'Can' tem som de 'ken' rápido"},
+            {"text": "I don't understand.", "phonetic": "/aɪ doʊnt ˌʌn.dərˈstænd/", "focus": "clarification", "tip": "O 't' de don't é uma pausa sutil"},
+            {"text": "Nice to meet you.", "phonetic": "/naɪs tuː miːt juː/", "focus": "social", "tip": "'To' vira 'tə' em fala rápida"},
+            {"text": "See you later!", "phonetic": "/siː juː ˈleɪ.tər/", "focus": "goodbyes", "tip": "O 't' de later vira 'd' suave no americano"},
+        ],
+        "intermediate": [
+            {"text": "I've been studying English for three years.", "phonetic": "/aɪv bɪn ˈstʌd.i.ɪŋ ˈɪŋ.ɡlɪʃ fɔːr θriː jɪrz/", "focus": "present_perfect", "tip": "O 'th' de three: língua entre os dentes e vibra"},
+            {"text": "Could you tell me how to get to the station?", "phonetic": "/kʊd juː tel miː haʊ tə ɡet tə ðə ˈsteɪ.ʃən?/", "focus": "directions", "tip": "'Could' tem o 'l' mudo"},
+            {"text": "I'm looking forward to hearing from you.", "phonetic": "/aɪm ˈlʊk.ɪŋ ˈfɔːr.wərd tə ˈhɪr.ɪŋ frʌm juː/", "focus": "business", "tip": "O 'ng' é um som só"},
+            {"text": "She's been working here since last summer.", "phonetic": "/ʃiz bɪn ˈwɜːr.kɪŋ hɪr sɪns læst ˈsʌm.ər/", "focus": "present_perfect_continuous", "tip": "'Since' tem som de 'sins'"},
+            {"text": "Would you mind opening the window?", "phonetic": "/wʊd juː maɪnd ˈoʊ.pən.ɪŋ ðə ˈwɪn.doʊ?/", "focus": "polite_requests", "tip": "'Mind' tem o 'i' longo como 'ai'"},
+            {"text": "I wish I could travel more often.", "phonetic": "/aɪ wɪʃ aɪ kʊd ˈtræv.əl mɔːr ˈɔː.fən/", "focus": "wishes", "tip": "O 'sh' é como 'ch' em 'chá' mas mais suave"},
+            {"text": "The weather has been really nice lately.", "phonetic": "/ðə ˈweð.ər hæz bɪn ˈrɪə.li naɪs ˈleɪt.li/", "focus": "small_talk", "tip": "O 'th' de weather é com vibração (voz)"},
+            {"text": "I'm not sure if I can make it on time.", "phonetic": "/aɪm nɑːt ʃʊr ɪf aɪ kæn meɪk ɪt ɑːn taɪm/", "focus": "uncertainty", "tip": "O 't' de not liga com sure: 'not-sure'"},
+        ],
+        "advanced": [
+            {"text": "Nevertheless, I believe we should reconsider our approach.", "phonetic": "/ˌnev.ər.ðəˈles, aɪ bɪˈliːv wiː ʃʊd ˌriː.kənˈsɪd.ər ˈaʊər əˈproʊtʃ/", "focus": "business_vocabulary", "tip": "'Nevertheless' tem 4 sílabas"},
+            {"text": "The implications of this research are particularly significant.", "phonetic": "/ði ˌɪm.plɪˈkeɪ.ʃənz əv ðɪs rɪˈsɜːrtʃ ɑːr pərˈtɪk.jə.lər.li sɪɡˈnɪf.ɪ.kənt/", "focus": "academic", "tip": "'Particularly' tem 5 sílabas"},
+            {"text": "I'd rather you didn't mention this to anyone.", "phonetic": "/aɪd ˈræð.ər juː ˈdɪd.ənt ˈmen.ʃən ðɪs tə ˈen.i.wʌn/", "focus": "preferences", "tip": "'Rather' tem som de 'é' no 'a'"},
+            {"text": "Had I known earlier, I would have made different arrangements.", "phonetic": "/hæd aɪ noʊn ˈɜːr.li.ər, aɪ wʊd hæv meɪd ˈdɪf.ər.ənt əˈreɪndʒ.mənts/", "focus": "third_conditional", "tip": "'Would have' contrai para 'would've'"},
+        ],
+        "business": [
+            {"text": "I'm following up on the proposal we discussed last week.", "phonetic": "/aɪm ˈfɑː.loʊ.ɪŋ ʌp ɑːn ðə prəˈpoʊ.zəl wiː dɪˈskʌst læst wiːk/", "focus": "follow_up", "tip": "'Proposal' tem acento no 'po'"},
+            {"text": "We need to touch base on the quarterly results.", "phonetic": "/wiː niːd tə tʌtʃ beɪs ɑːn ðə ˈkwɔːr.tər.li rɪˈzʌlts/", "focus": "meetings", "tip": "'Touch base' = conversar rapidamente"},
+            {"text": "Could you please CC me on that email?", "phonetic": "/kʊd juː pliːz siː siː miː ɑːn ðæt ˈiː.meɪl?/", "focus": "email", "tip": "'CC' se pronuncia 'ci-ci'"},
+        ],
+        "travel": [
+            {"text": "Is there a shuttle from the airport to downtown?", "phonetic": "/ɪz ðer ə ˈʃʌt.əl frʌm ði ˈer.pɔːrt tə ˈdaʊn.taʊn?/", "focus": "transport", "tip": "'Shuttle' tem 'sh' suave"},
+            {"text": "I'd like to book a room with a view of the ocean.", "phonetic": "/aɪd laɪk tə bʊk ə ruːm wɪð ə vjuː əv ði ˈoʊ.ʃən/", "focus": "hotel", "tip": "'View' é como 'viú' em português"},
+            {"text": "What's the best way to get around the city?", "phonetic": "/wʌts ðə best weɪ tə ɡet əˈraʊnd ðə ˈsɪt.i?/", "focus": "city", "tip": "'Around' tem som de 'ə-raund'"},
+        ],
+    },
+},
 # ============================================================
 # CONFIGURAÇÕES DE GAMIFICAÇÃO
 # ============================================================
