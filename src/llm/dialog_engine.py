@@ -119,7 +119,7 @@ class DialogEngine:
             return "(new conversation)"
         
         lines = []
-        for msg in history[-8:]:  # Últimas 8 mensagens
+        for msg in history[-12:]:  # Últimas 8 mensagens
             prefix = "Agent" if msg.get("role") == "agent" else "Student"
             lines.append(f"{prefix}: {msg.get('text', '')}")
         
@@ -195,6 +195,7 @@ CHARACTER RULES (MUST FOLLOW):
 5. React directly to what the student said.
 6. If the student makes a grammar or vocabulary error, subtly use the correct form in your response (do NOT explicitly correct them unless they ask).
 7. Stay within the {theme} context - do NOT change topics randomly.
+8. NEVER restart the conversation or re-greet the guest unless they explicitly leave and come back.
 
 CONVERSATION FLOW:
 - If this is the start, greet the student as a real {role} would.
@@ -216,7 +217,7 @@ Respond ONLY with a valid JSON object:
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.75,   # Equilíbrio entre criatividade e consistência
+                        "temperature": 0.6,   # Equilíbrio entre criatividade e consistência
                         "num_predict": 180,    # Suficiente para resposta + JSON
                         "top_p": 0.92,
                         "repeat_penalty": 1.1  # Evita repetições

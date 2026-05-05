@@ -267,6 +267,7 @@ class DataSeeder:
             {"name": "Clima", "icon": "🌤️", "description": "Tempo, estações e fenômenos naturais", "color": "#03A9F4"},
             {"name": "Transporte", "icon": "🚗", "description": "Meios de transporte e direção", "color": "#FF6F00"},
             {"name": "Profissões", "icon": "💼", "description": "Ocupações e carreiras", "color": "#33691E"},
+            {"name": "Números", "icon": "🔢", "description": "Números cardinais, ordinais e medidas", "color":"#FF6F00"},
         ]
     
     # ================================================================
@@ -585,7 +586,34 @@ class DataSeeder:
         ]
         words.extend([{"category_id": 12, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in professions])
         
+        # ================================ NUMEROS (cat 13) =======================
+        numbers = [
+            ("one", "um", "/wʌn/", "easy", "I have one brother."),
+            ("two", "dois", "/tuː/", "easy", "Two coffees, please."),
+            ("three", "três", "/θriː/", "easy", "I'll stay for three days."),
+            ("four", "quatro", "/fɔːr/", "easy", "My son is four years old."),
+            ("five", "cinco", "/faɪv/", "easy", "Give me five minutes."),
+            ("six", "seis", "/sɪks/", "easy", "I wake up at six."),
+            ("seven", "sete", "/ˈsev.ən/", "easy", "Seven days in a week."),
+            ("eight", "oito", "/eɪt/", "easy", "Eight people at the table."),
+            ("nine", "nove", "/naɪn/", "easy", "Nine months to have a baby."),
+            ("ten", "dez", "/ten/", "easy", "Ten fingers on my hands."),
+            ("eleven", "onze", "/ɪˈlev.ən/", "medium", "Eleven players on a team."),
+            ("twelve", "doze", "/twelv/", "medium", "Twelve months in a year."),
+            ("thirteen", "treze", "/θɜːrˈtiːn/", "medium", "Thirteen is unlucky for some."),
+            ("fourteen", "quatorze", "/ˌfɔːrˈtiːn/", "medium", "I'm fourteen years old."),
+            ("fifteen", "quinze", "/ˌfɪfˈtiːn/", "medium", "Fifteen minutes until the show."),
+            ("first", "primeiro", "/fɜːrst/", "medium", "This is my first time here."),
+            ("second", "segundo", "/ˈsek.ənd/", "medium", "Take the second door on the right."),
+            ("third", "terceiro", "/θɜːrd/", "hard", "The third floor, please."),
+            ("dollar", "dólar", "/ˈdɑː.lər/", "easy", "It costs twenty dollars."),
+            ("mile", "milha", "/maɪl/", "medium", "It's about 5 miles from here."),
+        ]
+        words.extend([{"category_id": 13, "english": w[0], "portuguese": w[1], "phonetic": w[2], "difficulty": w[3], "example_sentence": w[4]} for w in numbers])
+        
         return words
+
+
     
     # ================================================================
     # DADOS: DIÁLOGOS BÁSICOS (44 linhas)

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Expedito Anderson Rufino">
     <meta name="description" content="English Teacher Agent - Tutor de inglês por IA 100% offline e privado">
-    <title>English Teacher Agent v4.1</title>
+    <title>English Teacher Agent v4.2</title>
     <style>
         :root {
             --primary: #7c8cf8; --primary-dark: #5a6fd6; --primary-glow: rgba(124,140,248,0.15);
@@ -17,13 +17,14 @@
             --text: #e8eaf0; --text-secondary: #a0a5b8; --text-muted: #6b7084;
             --border: #1e2230; --border-hover: #2a2f40;
             --online-indicator: #4caf84; --offline-indicator: #f0a040;
+            --navy: #0a1628; --navy-light: #0f1f3a; --navy-accent: #1a3a6e;
             --radius: 16px; --radius-sm: 10px; --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
         }
         *{margin:0;padding:0;box-sizing:border-box}
         body{
             font-family:'Segoe UI',system-ui,-apple-system,'Inter',sans-serif;
             background:var(--bg);
-            background-image:radial-gradient(ellipse at 50% 0%,rgba(124,140,248,0.04) 0%,transparent 70%),radial-gradient(ellipse at 80% 100%,rgba(155,109,255,0.03) 0%,transparent 60%);
+            background-image:radial-gradient(ellipse at 50% 0%,rgba(26,58,110,0.08) 0%,transparent 70%),radial-gradient(ellipse at 80% 100%,rgba(155,109,255,0.03) 0%,transparent 60%);
             color:var(--text);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
         }
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}
@@ -31,26 +32,40 @@
         ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
 
         .header{
-            background:linear-gradient(180deg,rgba(19,22,32,0.98) 0%,rgba(19,22,32,0.92) 100%);
-            border-bottom:1px solid var(--border);padding:16px 28px;
+            background:linear-gradient(180deg,var(--navy) 0%,var(--navy-light) 60%,rgba(15,31,58,0.92) 100%);
+            border-bottom:1px solid var(--navy-accent);padding:16px 28px;
             display:flex;justify-content:space-between;align-items:center;
             position:sticky;top:0;z-index:100;backdrop-filter:blur(24px);
         }
         .header-brand{display:flex;align-items:center;gap:14px}
-        .header-logo{font-size:2.2em;filter:drop-shadow(0 0 12px rgba(124,140,248,0.4));animation:float 3s ease-in-out infinite}
+        .header-logo{font-size:2.2em;filter:drop-shadow(0 0 14px rgba(124,140,248,0.5));animation:float 3s ease-in-out infinite}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
         .header h1{
             font-size:1.6em;font-weight:800;letter-spacing:-0.5px;
             background:linear-gradient(135deg,#d8dce8 0%,#a8b0c8 30%,#c8cfe0 60%,#e0e4f0 100%);
             -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-            filter:drop-shadow(0 0 8px rgba(200,210,240,0.3));
+            filter:drop-shadow(0 0 10px rgba(200,210,240,0.4));
         }
-        .header-right{display:flex;align-items:center;gap:20px}
+        .header-right{display:flex;align-items:center;gap:18px}
+
+        /* Ícone Rádio Profissional */
+        .radio-btn{
+            display:flex;align-items:center;justify-content:center;
+            width:40px;height:40px;border-radius:50%;background:var(--navy-accent);
+            border:2px solid var(--navy-accent);cursor:pointer;transition:var(--transition);
+            text-decoration:none;font-size:1.2em;position:relative;
+        }
+        .radio-btn:hover{background:var(--primary-dark);border-color:var(--primary);box-shadow:0 0 20px rgba(124,140,248,0.3);transform:scale(1.08)}
+        .radio-btn::after{content:'♪';position:absolute;top:-6px;right:-6px;font-size:0.55em;animation:radioWave 1.5s ease-in-out infinite}
+        @keyframes radioWave{0%,100%{opacity:0.4;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+        .radio-btn.active{background:var(--success);border-color:var(--success);animation:radioPulse 2s ease-in-out infinite}
+        @keyframes radioPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,132,0.4)}50%{box-shadow:0 0 0 14px rgba(76,175,132,0)}}
+
         .header-stats{display:flex;gap:20px}
         .header-stat{text-align:center;position:relative}
         .header-stat .value{font-weight:700;font-size:1.1em;color:var(--text)}
         .header-stat .label{font-size:0.65em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px}
-        .header-stat:not(:last-child)::after{content:'';position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--border)}
+        .header-stat:not(:last-child)::after{content:'';position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--navy-accent)}
         .mode-indicator{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:0.7em;font-weight:600;background:var(--bg-input);border:1px solid var(--border);cursor:default;white-space:nowrap}
         .mode-dot{width:7px;height:7px;border-radius:50%;animation:glow 2s ease-in-out infinite}
         .mode-online .mode-dot{background:var(--online-indicator);box-shadow:0 0 8px rgba(76,175,132,0.5)}
@@ -61,8 +76,8 @@
         .dev-footer .dev-name{color:var(--silver-light);font-weight:700;background:linear-gradient(135deg,var(--silver-light),var(--silver));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
         .main-container{max-width:1000px;margin:24px auto;padding:0 16px}
-        .nav-tabs{display:flex;gap:4px;background:var(--bg-card);border-radius:var(--radius);padding:5px;margin-bottom:24px;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.2)}
-        .nav-tab{flex:1;padding:12px 8px;text-align:center;border:none;background:transparent;border-radius:13px;cursor:pointer;font-weight:600;font-size:0.85em;transition:var(--transition);color:var(--text-muted);white-space:nowrap}
+        .nav-tabs{display:flex;gap:4px;background:var(--bg-card);border-radius:var(--radius);padding:5px;margin-bottom:24px;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.2);overflow-x:auto}
+        .nav-tab{flex:1;padding:12px 6px;text-align:center;border:none;background:transparent;border-radius:13px;cursor:pointer;font-weight:600;font-size:0.8em;transition:var(--transition);color:var(--text-muted);white-space:nowrap;min-width:fit-content}
         .nav-tab:hover{color:var(--text);background:var(--bg-card-hover)}
         .nav-tab.active{background:linear-gradient(135deg,rgba(124,140,248,0.2),rgba(155,109,255,0.15));color:#fff;box-shadow:0 2px 10px var(--primary-glow)}
 
@@ -83,7 +98,7 @@
         @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         .study-card.active{display:block}
 
-        .word-display{text-align:center;padding:36px 24px;background:linear-gradient(160deg,#131825 0%,#191e30 100%);border-radius:var(--radius);margin-bottom:20px;border:1px solid var(--border)}
+        .word-display{text-align:center;padding:36px 24px;background:linear-gradient(160deg,var(--navy) 0%,#131825 100%);border-radius:var(--radius);margin-bottom:20px;border:1px solid var(--navy-accent)}
         .word-english{font-size:3em;font-weight:800;background:linear-gradient(135deg,#d0d5ff,var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.5px}
         .word-phonetic{font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:1.1em;margin:8px 0}
         .word-translation{font-size:1.3em;color:var(--text-secondary);margin-top:6px;font-weight:500}
@@ -97,6 +112,7 @@
         .btn-listen{background:#3895b8;color:#fff}
         .btn-next{background:var(--warning);color:#131620}
         .btn-send{background:var(--primary);color:#fff;padding:10px 18px}
+        .btn-fact{background:#6c5ce7;color:#fff}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--danger-glow)}50%{box-shadow:0 0 0 16px transparent}}
 
         .score-display{text-align:center;padding:20px;display:none;animation:popIn 0.4s ease}
@@ -130,12 +146,27 @@
         .completion-banner{text-align:center;padding:28px}
         .completion-banner .big-emoji{font-size:3.5em;margin-bottom:8px}
 
+        /* Modal Rádio */
+        .radio-modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:200;justify-content:center;align-items:center}
+        .radio-modal-overlay.show{display:flex}
+        .radio-modal{background:var(--bg-card);border-radius:var(--radius);padding:28px;max-width:480px;width:92%;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto}
+        .radio-modal h3{font-size:1.3em;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+        .radio-modal .close-btn{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-muted);font-size:1.5em;cursor:pointer;transition:var(--transition)}
+        .radio-modal .close-btn:hover{color:var(--text)}
+        .radio-station{padding:12px 16px;margin:6px 0;background:var(--bg-input);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);border:1px solid transparent;display:flex;align-items:center;gap:10px}
+        .radio-station:hover{border-color:var(--primary);background:var(--bg-card-hover)}
+        .radio-station.playing{border-color:var(--success);background:rgba(76,175,132,0.1)}
+        .radio-station .play-icon{font-size:1.4em;min-width:30px;text-align:center}
+        .radio-station .station-info{flex:1}
+        .radio-station .station-name{font-weight:600;font-size:0.9em}
+        .radio-station .station-lang{font-size:0.7em;color:var(--text-muted)}
+
         @media(max-width:640px){
             .categories-grid{grid-template-columns:repeat(2,1fr)}
             .word-english{font-size:2.2em}
             .header-stats{gap:10px}
             .header h1{font-size:1.2em}
-            .nav-tab{font-size:0.7em;padding:10px 5px}
+            .nav-tab{font-size:0.68em;padding:10px 3px}
             .chat-message{max-width:90%}
             .category-card .icon{font-size:2.2em}
         }
@@ -145,6 +176,7 @@
     <div class="header">
         <div class="header-brand"><span class="header-logo">🎧</span><h1>English Teacher</h1></div>
         <div class="header-right">
+            <button class="radio-btn" id="radioBtn" onclick="toggleRadioModal()" title="Rádio em Inglês">📻</button>
             <div class="mode-indicator mode-offline" id="modeIndicator" title="Modo de operação"><span class="mode-dot"></span><span id="modeLabel">Offline</span></div>
             <div class="header-stats">
                 <div class="header-stat"><div class="value" id="streakCount">0</div><div class="label">Dias 🔥</div></div>
@@ -159,245 +191,156 @@
             <button class="nav-tab active" onclick="switchTab('vocabulary')">📖 Vocabulário</button>
             <button class="nav-tab" onclick="switchTab('dialogs')">🗣️ Diálogos</button>
             <button class="nav-tab" onclick="switchTab('freechat')">💬 Conversa Livre</button>
+            <button class="nav-tab" onclick="switchTab('numbers')">🔢 Números</button>
             <button class="nav-tab" onclick="switchTab('pronunciation')">🎤 Pronúncia</button>
         </div>
         <div class="categories-grid" id="categoriesGrid"></div>
 
         <!-- Vocabulário -->
         <div class="study-card active" id="vocabularyCard">
-            <div class="word-display">
-                <div class="word-english" id="wordEnglish">Dog</div>
-                <div class="word-phonetic" id="wordPhonetic">/dɔɡ/</div>
-                <div class="word-translation" id="wordTranslation">cachorro</div>
-                <div class="word-example" id="wordExample">"The dog is playing in the park."</div>
-            </div>
+            <div class="word-display"><div class="word-english" id="wordEnglish">Dog</div><div class="word-phonetic" id="wordPhonetic">/dɔɡ/</div><div class="word-translation" id="wordTranslation">cachorro</div><div class="word-example" id="wordExample">"The dog is playing in the park."</div></div>
             <div style="text-align:center;margin-bottom:14px"><button class="btn btn-listen" onclick="playWordAudio()">🔊 Ouvir</button></div>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-                <button class="btn btn-record" id="recordBtn" onclick="toggleRecording()">🎤 Gravar</button>
-                <button class="btn btn-next" onclick="nextWord()">⏭️ Pular</button>
-            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn btn-record" id="recordBtn" onclick="toggleRecording()">🎤 Gravar</button><button class="btn btn-next" onclick="nextWord()">⏭️ Pular</button></div>
             <div class="score-display" id="scoreDisplay"><div class="score-circle score-medium" id="scoreCircle">75</div><p style="margin-top:8px;color:var(--text-secondary)" id="scoreText"></p></div>
         </div>
 
-        <!-- Diálogos com IA -->
+        <!-- Diálogos -->
         <div class="study-card" id="dialogCard">
-            <div class="chat-container" id="dialogChat">
-                <div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">🤖</div><p style="font-size:1.1em;font-weight:600">Selecione um tema para começar</p><p style="font-size:0.85em">A IA entrará no personagem e usará dados reais</p></div>
-            </div>
-            <div class="chat-input-area" id="dialogInputArea" style="display:none">
-                <input type="text" class="chat-input" id="dialogInput" placeholder="Digite sua resposta em inglês..." onkeypress="if(event.key==='Enter')submitDialogResponse()">
-                <button class="btn btn-send" onclick="submitDialogResponse()">✉️ Enviar</button>
-            </div>
-            <div id="dialogActionButtons" style="text-align:center;margin-top:14px;display:none">
-                <button class="btn btn-primary" onclick="resetDialog()">🔄 Reiniciar</button>
-                <button class="btn btn-next" onclick="switchTab('dialogs');loadDialogThemes()">📋 Outro Tema</button>
-            </div>
+            <div class="chat-container" id="dialogChat"><div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">🤖</div><p style="font-size:1.1em;font-weight:600">Selecione um tema para começar</p><p style="font-size:0.85em">A IA entrará no personagem e usará dados reais</p></div></div>
+            <div class="chat-input-area" id="dialogInputArea" style="display:none"><input type="text" class="chat-input" id="dialogInput" placeholder="Digite sua resposta em inglês..." onkeypress="if(event.key==='Enter')submitDialogResponse()"><button class="btn btn-send" onclick="submitDialogResponse()">✉️ Enviar</button></div>
+            <div id="dialogActionButtons" style="text-align:center;margin-top:14px;display:none"><button class="btn btn-primary" onclick="resetDialog()">🔄 Reiniciar</button><button class="btn btn-next" onclick="switchTab('dialogs');loadDialogThemes()">📋 Outro Tema</button></div>
         </div>
 
         <!-- Conversa Livre -->
         <div class="study-card" id="freechatCard">
-            <div style="margin-bottom:14px">
-                <select class="context-select" id="chatContext" onchange="resetFreeChat()">
-                    <option value="casual conversation">💬 Conversa Casual</option>
-                    <option value="restaurant">🍽️ Restaurante</option>
-                    <option value="airport">✈️ Aeroporto</option>
-                    <option value="hotel">🏨 Hotel</option>
-                    <option value="shopping">🛒 Compras</option>
-                    <option value="job interview">💼 Entrevista de Emprego</option>
-                </select>
+            <div style="margin-bottom:14px"><select class="context-select" id="chatContext" onchange="resetFreeChat()"><option value="casual conversation">💬 Conversa Casual</option><option value="restaurant">🍽️ Restaurante</option><option value="airport">✈️ Aeroporto</option><option value="hotel">🏨 Hotel</option><option value="shopping">🛒 Compras</option><option value="job interview">💼 Entrevista de Emprego</option></select></div>
+            <div class="chat-container" id="freeChatMessages"><div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">💬</div><p style="font-size:1.1em;font-weight:600">Converse livremente com o tutor IA!</p><p style="font-size:0.85em">Escolha um contexto e comece a digitar em inglês</p></div></div>
+            <div class="chat-input-area"><input type="text" class="chat-input" id="freeChatInput" placeholder="Digite sua mensagem em inglês..." onkeypress="if(event.key==='Enter')sendFreeChat()"><button class="btn btn-send" onclick="sendFreeChat()">✉️ Enviar</button></div>
+        </div>
+
+        <!-- Números -->
+        <div class="study-card" id="numbersCard">
+            <div style="text-align:center;margin-bottom:16px"><div style="font-size:1.4em;font-weight:700;margin-bottom:6px">🔢 Aprenda Números em Inglês</div><div style="color:var(--text-muted);font-size:0.85em">Cardinais, ordinais, horas, preços e medidas</div></div>
+            <div class="word-display" style="margin-bottom:16px"><div class="word-english" id="numberEnglish">7</div><div class="word-phonetic" id="numberPhonetic">/ˈsev.ən/</div><div class="word-translation" id="numberTranslation">sete</div><div class="word-example" id="numberFact">7 is the number of days in a week.</div></div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+                <button class="btn btn-listen" onclick="speakNumber()">🔊 Ouvir</button>
+                <button class="btn btn-record" id="numberRecordBtn" onclick="toggleNumberRecording()">🎤 Gravar</button>
+                <button class="btn btn-next" onclick="nextNumber()">➡️ Próximo</button>
+                <button class="btn btn-fact" onclick="loadNumberFact()">📖 Curiosidade</button>
             </div>
-            <div class="chat-container" id="freeChatMessages">
-                <div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">💬</div><p style="font-size:1.1em;font-weight:600">Converse livremente com o tutor IA!</p><p style="font-size:0.85em">Escolha um contexto e comece a digitar em inglês</p></div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" class="chat-input" id="freeChatInput" placeholder="Digite sua mensagem em inglês..." onkeypress="if(event.key==='Enter')sendFreeChat()">
-                <button class="btn btn-send" onclick="sendFreeChat()">✉️ Enviar</button>
-            </div>
+            <div style="text-align:center;margin-bottom:12px"><select class="context-select" id="numberType" onchange="loadNumberCategory()" style="max-width:280px;margin:0 auto"><option value="cardinals">1️⃣ Cardinais (1-20)</option><option value="ordinals">🥇 Ordinais (1st-10th)</option><option value="time">🕐 Horas</option><option value="prices">💵 Preços e Dinheiro</option><option value="measures">📏 Medidas</option></select></div>
+            <div class="score-display" id="numberScoreDisplay"><div class="score-circle score-medium" id="numberScoreCircle">75</div><p style="margin-top:8px;color:var(--text-secondary)" id="numberScoreText"></p></div>
         </div>
 
         <!-- Pronúncia -->
         <div class="study-card" id="pronunciationCard">
-            <div style="margin-bottom:14px;text-align:center">
-                <select class="context-select" id="phraseLevel" onchange="loadPronunciationPhrases()" style="max-width:280px;margin:0 auto">
-                    <option value="beginner">🌱 Iniciante</option>
-                    <option value="intermediate">📚 Intermediário</option>
-                    <option value="advanced">🚀 Avançado</option>
-                    <option value="business">💼 Negócios</option>
-                    <option value="travel">✈️ Viagem</option>
-                </select>
-            </div>
-            <div style="text-align:center;margin-bottom:20px;background:var(--bg-input);border-radius:var(--radius);padding:24px">
-                <div style="font-size:1.3em;font-weight:700" id="phraseText">Carregando...</div>
-                <div style="color:var(--text-muted);font-family:monospace;margin-top:6px" id="phoneticText"></div>
-                <div style="color:var(--warning);font-size:0.85em;margin-top:8px" id="phraseTip"></div>
-                <div style="color:var(--text-muted);font-size:0.75em;margin-top:4px" id="phraseFocus"></div>
-            </div>
+            <div style="margin-bottom:14px;text-align:center"><select class="context-select" id="phraseLevel" onchange="loadPronunciationPhrases()" style="max-width:280px;margin:0 auto"><option value="beginner">🌱 Iniciante</option><option value="intermediate">📚 Intermediário</option><option value="advanced">🚀 Avançado</option><option value="business">💼 Negócios</option><option value="travel">✈️ Viagem</option></select></div>
+            <div style="text-align:center;margin-bottom:20px;background:var(--bg-input);border-radius:var(--radius);padding:24px"><div style="font-size:1.3em;font-weight:700" id="phraseText">Carregando...</div><div style="color:var(--text-muted);font-family:monospace;margin-top:6px" id="phoneticText"></div><div style="color:var(--warning);font-size:0.85em;margin-top:8px" id="phraseTip"></div><div style="color:var(--text-muted);font-size:0.75em;margin-top:4px" id="phraseFocus"></div></div>
             <div style="text-align:center;margin-bottom:12px;color:var(--text-muted);font-size:0.85em" id="phraseCounter"></div>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-                <button class="btn btn-record" id="phraseRecordBtn" onclick="togglePhraseRecording()">🎤 Gravar</button>
-                <button class="btn btn-listen" onclick="playPhraseAudio()">🔊 Ouvir</button>
-                <button class="btn btn-next" onclick="nextPronunciationPhrase()">➡️ Próxima</button>
-            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn btn-record" id="phraseRecordBtn" onclick="togglePhraseRecording()">🎤 Gravar</button><button class="btn btn-listen" onclick="playPhraseAudio()">🔊 Ouvir</button><button class="btn btn-next" onclick="nextPronunciationPhrase()">➡️ Próxima</button></div>
             <div class="score-display" id="phraseScoreDisplay"><div class="score-circle score-medium" id="phraseScoreCircle">75</div><p style="margin-top:8px;color:var(--text-secondary)" id="phraseScoreText"></p></div>
+        </div>
+    </div>
+
+    <!-- Modal Rádio -->
+    <div class="radio-modal-overlay" id="radioModalOverlay" onclick="closeRadioModal(event)">
+        <div class="radio-modal" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3>📻 Rádio em Inglês</h3>
+                <button class="close-btn" onclick="closeRadioModal()">✕</button>
+            </div>
+            <div id="radioStations"><p style="color:var(--text-muted);text-align:center;padding:20px">Carregando estações...</p></div>
+            <div style="text-align:center;margin-top:12px"><button class="btn btn-next" onclick="loadRadioStations()">🔄 Atualizar</button></div>
         </div>
     </div>
 
     <div class="dev-footer">
         <p>Desenvolvido por <span class="dev-name">Expedito Anderson Rufino</span></p>
-        <p style="margin-top:3px">English Teacher Agent v4.1 • 100% Offline & Privado</p>
+        <p style="margin-top:3px">English Teacher Agent v4.2 • 100% Offline & Privado</p>
     </div>
 
     <script>
-        // ============================================================
-        // ESTADO GLOBAL
-        // ============================================================
         let currentTab='vocabulary',selectedCategory=null,currentWords=[],currentWordIndex=0;
         let mediaRecorder=null,audioChunks=[],sessionWords=[],sessionStartTime=0;
-        let freeChatHistory=[];
-        let currentPhrases=[],currentPhraseIndex=0,phraseMediaRecorder=null,phraseAudioChunks=[];
-        let isOnlineMode=false;
-        let dialogAIHistory=[],dialogAIRole='',dialogAITheme='',isDialogActive=false;
+        let freeChatHistory=[],currentPhrases=[],currentPhraseIndex=0,phraseMediaRecorder=null,phraseAudioChunks=[];
+        let isOnlineMode=false,dialogAIHistory=[],dialogAIRole='',dialogAITheme='',isDialogActive=false;
+        let currentNumbers=[],currentNumberIndex=0,numberMediaRecorder=null,numberAudioChunks=[],currentAudio=null;
 
-        // ============================================================
-        // MODO HÍBRIDO
-        // ============================================================
         async function checkOnlineStatus(){
-            const el=document.getElementById('modeIndicator'),label=document.getElementById('modeLabel');
-            el.className='mode-indicator mode-offline';label.textContent='Verificando...';
-            try{
-                const r=await fetch('/api/live/status');const d=await r.json();
-                isOnlineMode=(d.mode==='hybrid'&&d.online_count>0);
-                if(isOnlineMode){el.className='mode-indicator mode-online';label.textContent=`Online • ${d.online_count} serviços`;el.title=`Modo Híbrido: ${d.online_count}/${d.total_services} APIs`}
-                else{el.className='mode-indicator mode-offline';label.textContent='Offline • Modo local';el.title='Modo Offline: usando dados locais'}
-            }catch(e){isOnlineMode=false;el.className='mode-indicator mode-offline';label.textContent='Offline • Modo local'}
+            const el=document.getElementById('modeIndicator'),label=document.getElementById('modeLabel');el.className='mode-indicator mode-offline';label.textContent='Verificando...';
+            try{const r=await fetch('/api/live/status');const d=await r.json();isOnlineMode=(d.mode==='hybrid'&&d.online_count>0);if(isOnlineMode){el.className='mode-indicator mode-online';label.textContent=`Online • ${d.online_count} serviços`}else{el.className='mode-indicator mode-offline';label.textContent='Offline • Modo local'}}catch(e){isOnlineMode=false;el.className='mode-indicator mode-offline';label.textContent='Offline • Modo local'}
         }
-
-        // ============================================================
-        // INICIALIZAÇÃO
-        // ============================================================
         async function init(){await checkOnlineStatus();await loadUserStats();await loadCategories()}
-        async function loadUserStats(){
-            try{const r=await fetch('/api/user/stats');const d=await r.json();
-                document.getElementById('streakCount').textContent=d.streak?.current_streak||0;
-                document.getElementById('xpCount').textContent=d.level?.total_xp||0;
-                if(d.level?.current)document.getElementById('levelDisplay').textContent=`${d.level.current.icon||'🌱'} ${d.level.current.level}`
-            }catch(e){}
-        }
+        async function loadUserStats(){try{const r=await fetch('/api/user/stats');const d=await r.json();document.getElementById('streakCount').textContent=d.streak?.current_streak||0;document.getElementById('xpCount').textContent=d.level?.total_xp||0;if(d.level?.current)document.getElementById('levelDisplay').textContent=`${d.level.current.icon||'🌱'} ${d.level.current.level}`}catch(e){}}
 
         function switchTab(tab){
             currentTab=tab;
-            document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='vocabulary'&&i===0)||(tab==='dialogs'&&i===1)||(tab==='freechat'&&i===2)||(tab==='pronunciation'&&i===3)));
+            document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='vocabulary'&&i===0)||(tab==='dialogs'&&i===1)||(tab==='freechat'&&i===2)||(tab==='numbers'&&i===3)||(tab==='pronunciation'&&i===4)));
             document.querySelectorAll('.study-card').forEach(c=>c.classList.remove('active'));
             if(tab==='vocabulary'){document.getElementById('vocabularyCard').classList.add('active');loadCategories();document.getElementById('categoriesGrid').style.display='grid'}
             else if(tab==='dialogs'){document.getElementById('dialogCard').classList.add('active');loadDialogThemes();document.getElementById('categoriesGrid').style.display='grid'}
             else if(tab==='freechat'){document.getElementById('freechatCard').classList.add('active');document.getElementById('categoriesGrid').style.display='none'}
+            else if(tab==='numbers'){document.getElementById('numbersCard').classList.add('active');document.getElementById('categoriesGrid').style.display='none';loadNumberCategory()}
             else if(tab==='pronunciation'){document.getElementById('pronunciationCard').classList.add('active');document.getElementById('categoriesGrid').style.display='none';loadPronunciationPhrases()}
         }
 
-        async function loadCategories(){
-            try{const r=await fetch('/api/categories');const d=await r.json();
-                document.getElementById('categoriesGrid').innerHTML=d.categories.map(c=>`<div class="category-card" onclick="selectCategory(${c.id},'${c.name.replace(/'/g,"\\'")}')" data-cat-id="${c.id}"><span class="icon">${c.icon}</span><div class="name">${c.name}</div><div class="progress-bar"><div class="progress-fill" style="width:${c.total_words>0?(c.mastered_words/c.total_words*100):0}%"></div></div><small>${c.mastered_words}/${c.total_words}</small></div>`).join('')
-            }catch(e){}
-        }
+        async function loadCategories(){try{const r=await fetch('/api/categories');const d=await r.json();document.getElementById('categoriesGrid').innerHTML=d.categories.map(c=>`<div class="category-card" onclick="selectCategory(${c.id},'${c.name.replace(/'/g,"\\'")}')" data-cat-id="${c.id}"><span class="icon">${c.icon}</span><div class="name">${c.name}</div><div class="progress-bar"><div class="progress-fill" style="width:${c.total_words>0?(c.mastered_words/c.total_words*100):0}%"></div></div><small>${c.mastered_words}/${c.total_words}</small></div>`).join('')}catch(e){}}
         async function selectCategory(id){selectedCategory=id;document.querySelectorAll('.category-card').forEach(c=>c.classList.remove('selected'));document.querySelector(`[data-cat-id="${id}"]`)?.classList.add('selected');await loadWords(id)}
-        async function loadWords(id){
-            try{const r=await fetch(`/api/categories/${id}/words?limit=10&mode=new`);const d=await r.json();
-                currentWords=d.words;currentWordIndex=0;sessionWords=[];sessionStartTime=Date.now();
-                if(currentWords.length>0){displayWord(currentWords[0]);document.getElementById('vocabularyCard').classList.add('active');document.getElementById('scoreDisplay').style.display='none'}
-            }catch(e){}
-        }
+        async function loadWords(id){try{const r=await fetch(`/api/categories/${id}/words?limit=10&mode=new`);const d=await r.json();currentWords=d.words;currentWordIndex=0;sessionWords=[];sessionStartTime=Date.now();if(currentWords.length>0){displayWord(currentWords[0]);document.getElementById('vocabularyCard').classList.add('active');document.getElementById('scoreDisplay').style.display='none'}}catch(e){}}
         function displayWord(w){document.getElementById('wordEnglish').textContent=w.english;document.getElementById('wordPhonetic').textContent=w.phonetic||'';document.getElementById('wordTranslation').textContent=w.portuguese;document.getElementById('wordExample').textContent=w.example_sentence?`"${w.example_sentence}"`:'';document.getElementById('scoreDisplay').style.display='none'}
         function nextWord(){currentWordIndex++;if(currentWordIndex>=currentWords.length){completeSession();return}displayWord(currentWords[currentWordIndex]);document.getElementById('scoreDisplay').style.display='none'}
         async function completeSession(){const dur=Math.floor((Date.now()-sessionStartTime)/1000);try{await fetch('/api/study/session/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:selectedCategory,mode:'vocabulary',words:sessionWords,duration:dur})});alert(`Sessao concluida! Palavras: ${sessionWords.length}`);await loadCategories();await loadUserStats();selectedCategory=null;document.getElementById('vocabularyCard').classList.remove('active')}catch(e){}}
-
         async function toggleRecording(){mediaRecorder?.state==='recording'?stopRecording():await startRecording()}
-        async function startRecording(){
-            try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});audioChunks=[];mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data)};mediaRecorder.onstop=async()=>{s.getTracks().forEach(t=>t.stop());if(audioChunks.length>0)await processRecording(new Blob(audioChunks,{type:'audio/webm'}));document.getElementById('recordBtn').classList.remove('recording');document.getElementById('recordBtn').textContent='🎤 Gravar'};mediaRecorder.start();document.getElementById('recordBtn').classList.add('recording');document.getElementById('recordBtn').textContent='⏹️ Parar';setTimeout(()=>{if(mediaRecorder?.state==='recording')stopRecording()},8000)}catch(e){alert('Erro ao acessar microfone: '+e.message)}
-        }
+        async function startRecording(){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});audioChunks=[];mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data)};mediaRecorder.onstop=async()=>{s.getTracks().forEach(t=>t.stop());if(audioChunks.length>0)await processRecording(new Blob(audioChunks,{type:'audio/webm'}));document.getElementById('recordBtn').classList.remove('recording');document.getElementById('recordBtn').textContent='🎤 Gravar'};mediaRecorder.start();document.getElementById('recordBtn').classList.add('recording');document.getElementById('recordBtn').textContent='⏹️ Parar';setTimeout(()=>{if(mediaRecorder?.state==='recording')stopRecording()},8000)}catch(e){alert('Erro ao acessar microfone: '+e.message)}}
         function stopRecording(){if(mediaRecorder?.state==='recording')mediaRecorder.stop()}
-        async function processRecording(blob){
-            const fd=new FormData();fd.append('audio',blob,'recording.webm');fd.append('expected',currentWords[currentWordIndex].english);
-            try{const r=await(await fetch('/api/analyze',{method:'POST',body:fd})).json();
-                if(r.success){displayScore(r);const pr=await(await fetch('/api/study/word',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word_id:currentWords[currentWordIndex].id,score:r.pronunciation_score})})).json();sessionWords.push({word_id:currentWords[currentWordIndex].id,score:r.pronunciation_score,xp_earned:pr.xp_earned});document.getElementById('xpCount').textContent=parseInt(document.getElementById('xpCount').textContent)+pr.xp_earned;document.getElementById('streakCount').textContent=pr.streak?.current_streak||0}
-            }catch(e){}
-        }
+        async function processRecording(blob){const fd=new FormData();fd.append('audio',blob,'recording.webm');fd.append('expected',currentWords[currentWordIndex].english);try{const r=await(await fetch('/api/analyze',{method:'POST',body:fd})).json();if(r.success){displayScore(r);const pr=await(await fetch('/api/study/word',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word_id:currentWords[currentWordIndex].id,score:r.pronunciation_score})})).json();sessionWords.push({word_id:currentWords[currentWordIndex].id,score:r.pronunciation_score,xp_earned:pr.xp_earned});document.getElementById('xpCount').textContent=parseInt(document.getElementById('xpCount').textContent)+pr.xp_earned;document.getElementById('streakCount').textContent=pr.streak?.current_streak||0}}catch(e){}}
         function displayScore(r){const d=document.getElementById('scoreDisplay'),c=document.getElementById('scoreCircle'),t=document.getElementById('scoreText');d.style.display='block';const s=Math.round(r.pronunciation_score||0);c.textContent=s;c.className='score-circle '+(s>=80?'score-high':s>=60?'score-medium':'score-low');t.textContent=r.feedback?.correction||(s>=80?'✅ Muito bem!':s>=60?'👍 Continue!':'💪 Tente novamente!')}
-
         async function speakText(text){try{const r=await fetch('/api/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});if(r.ok)new Audio(URL.createObjectURL(await r.blob())).play()}catch(e){}}
         function playWordAudio(){if(currentWords[currentWordIndex]?.english)speakText(currentWords[currentWordIndex].english)}
         function playPhraseAudio(){const t=document.getElementById('phraseText').textContent;if(t&&t!=='Carregando...')speakText(t)}
 
-        // ============================================================
-        // DIÁLOGOS COM IA
-        // ============================================================
-        async function loadDialogThemes(){
-            try{const d=await(await fetch('/api/dialogs/themes')).json();const icons={'Aeroporto':'✈️','Restaurante':'🍽️','Hotel':'🏨','Direções':'🗺️','Compras':'🛒','Emergência':'🏥','Cafeteria':'☕','Transporte':'🚗','Farmácia':'💊','Loja de Roupas':'👗','Supermercado':'🛒'};document.getElementById('categoriesGrid').innerHTML=d.themes.map(t=>`<div class="category-card" onclick="selectDialogTheme('${t}')" data-theme="${t}"><span class="icon">${icons[t]||'💬'}</span><div class="name">${t}</div></div>`).join('');resetDialogState()}catch(e){}
-        }
-        function resetDialogState(){dialogAIHistory=[];dialogAIRole='';dialogAITheme='';isDialogActive=false;document.getElementById('dialogChat').innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">🤖</div><p style="font-size:1.1em;font-weight:600">Selecione um tema para começar</p><p style="font-size:0.85em">A IA entrará no personagem e usará dados reais</p></div>`;document.getElementById('dialogInputArea').style.display='none';document.getElementById('dialogActionButtons').style.display='none'}
+        // Números
+        function loadNumberCategory(){const type=document.getElementById('numberType').value;const data={cardinals:[{en:"one",pt:"um",ph:"/wʌn/",ex:"I have one brother."},{en:"two",pt:"dois",ph:"/tuː/",ex:"Two coffees, please."},{en:"three",pt:"três",ph:"/θriː/",ex:"Three days in New York."},{en:"four",pt:"quatro",ph:"/fɔːr/",ex:"My son is four."},{en:"five",pt:"cinco",ph:"/faɪv/",ex:"Give me five minutes."},{en:"six",pt:"seis",ph:"/sɪks/",ex:"I wake up at six."},{en:"seven",pt:"sete",ph:"/ˈsev.ən/",ex:"Seven days in a week."},{en:"eight",pt:"oito",ph:"/eɪt/",ex:"Eight people at the table."},{en:"nine",pt:"nove",ph:"/naɪn/",ex:"Nine months."},{en:"ten",pt:"dez",ph:"/ten/",ex:"Ten fingers."},{en:"eleven",pt:"onze",ph:"/ɪˈlev.ən/",ex:"Eleven players."},{en:"twelve",pt:"doze",ph:"/twelv/",ex:"Twelve months."},{en:"thirteen",pt:"treze",ph:"/θɜːrˈtiːn/",ex:"Thirteen is unlucky."},{en:"fourteen",pt:"quatorze",ph:"/ˌfɔːrˈtiːn/",ex:"I'm fourteen."},{en:"fifteen",pt:"quinze",ph:"/ˌfɪfˈtiːn/",ex:"Fifteen minutes."},{en:"sixteen",pt:"dezesseis",ph:"/ˌsɪksˈtiːn/",ex:"Sixteen candles."},{en:"seventeen",pt:"dezessete",ph:"/ˌsev.ənˈtiːn/",ex:"Seventeen years old."},{en:"eighteen",pt:"dezoito",ph:"/ˌeɪˈtiːn/",ex:"Eighteen and older."},{en:"nineteen",pt:"dezenove",ph:"/ˌnaɪnˈtiːn/",ex:"Nineteen students."},{en:"twenty",pt:"vinte",ph:"/ˈtwen.ti/",ex:"Twenty dollars."}],ordinals:[{en:"first",pt:"primeiro",ph:"/fɜːrst/",ex:"My first time here."},{en:"second",pt:"segundo",ph:"/ˈsek.ənd/",ex:"Second door on the right."},{en:"third",pt:"terceiro",ph:"/θɜːrd/",ex:"The third floor."},{en:"fourth",pt:"quarto",ph:"/fɔːrθ/",ex:"Fourth of July."},{en:"fifth",pt:"quinto",ph:"/fɪfθ/",ex:"Fifth Avenue."},{en:"sixth",pt:"sexto",ph:"/sɪksθ/",ex:"Sixth sense."},{en:"seventh",pt:"sétimo",ph:"/ˈsev.ənθ/",ex:"Seventh heaven."},{en:"eighth",pt:"oitavo",ph:"/eɪtθ/",ex:"Eighth grade."},{en:"ninth",pt:"nono",ph:"/naɪnθ/",ex:"Ninth inning."},{en:"tenth",pt:"décimo",ph:"/tenθ/",ex:"Tenth anniversary."}],time:[{en:"It's three o'clock",pt:"São três horas",ph:"/ɪts θriː əˈklɑːk/",ex:"It's three o'clock in the afternoon."},{en:"half past two",pt:"duas e meia",ph:"/hæf pæst tuː/",ex:"The meeting is at half past two."},{en:"quarter to five",pt:"quinze para as cinco",ph:"/ˈkwɔːr.tər tə faɪv/",ex:"I'll arrive at quarter to five."},{en:"ten past eight",pt:"oito e dez",ph:"/ten pæst eɪt/",ex:"The bus leaves at ten past eight."},{en:"noon",pt:"meio-dia",ph:"/nuːn/",ex:"Lunch is at noon."},{en:"midnight",pt:"meia-noite",ph:"/ˈmɪd.naɪt/",ex:"The party ended at midnight."}],prices:[{en:"How much is it?",pt:"Quanto é?",ph:"/haʊ mʌtʃ ɪz ɪt/",ex:"How much is it? It's ten dollars."},{en:"It costs $25.99",pt:"Custa $25.99",ph:"/ɪt kɔːsts/",ex:"It costs twenty-five ninety-nine."},{en:"That's too expensive",pt:"Isso é muito caro",ph:"/ðæts tuː ɪkˈspen.sɪv/",ex:"That's too expensive for me."},{en:"Do you have change?",pt:"Você tem troco?",ph:"/duː juː hæv tʃeɪndʒ/",ex:"Do you have change for a twenty?"},{en:"I'll pay in cash",pt:"Vou pagar em dinheiro",ph:"/aɪl peɪ ɪn kæʃ/",ex:"I'll pay in cash, please."},{en:"Can I get a discount?",pt:"Posso ter um desconto?",ph:"/kæn aɪ ɡet ə ˈdɪs.kaʊnt/",ex:"Can I get a discount on this?"}],measures:[{en:"one mile",pt:"uma milha",ph:"/maɪl/",ex:"It's about one mile from here."},{en:"five feet",pt:"cinco pés",ph:"/fiːt/",ex:"I'm five feet ten inches tall."},{en:"two pounds",pt:"duas libras",ph:"/paʊndz/",ex:"I'd like two pounds of apples."},{en:"one gallon",pt:"um galão",ph:"/ˈɡæl.ən/",ex:"A gallon of milk, please."},{en:"seventy degrees",pt:"setenta graus",ph:"/dɪˈɡriːz/",ex:"It's seventy degrees today."},{en:"one kilometer",pt:"um quilômetro",ph:"/kɪˈlɑː.mə.t̬ɚ/",ex:"It's one kilometer to the beach."}]};currentNumbers=data[type]||data.cardinals;currentNumberIndex=0;displayNumber(currentNumbers[0]);document.getElementById('numberScoreDisplay').style.display='none';document.getElementById('numberFact').textContent=currentNumbers[0].ex}
+        function displayNumber(n){document.getElementById('numberEnglish').textContent=n.en;document.getElementById('numberPhonetic').textContent=n.ph;document.getElementById('numberTranslation').textContent=n.pt;document.getElementById('numberFact').textContent=n.ex;document.getElementById('numberScoreDisplay').style.display='none'}
+        function nextNumber(){currentNumberIndex++;if(currentNumberIndex>=currentNumbers.length)currentNumberIndex=0;displayNumber(currentNumbers[currentNumberIndex]);document.getElementById('numberScoreDisplay').style.display='none'}
+        function speakNumber(){if(currentNumbers[currentNumberIndex]?.en)speakText(currentNumbers[currentNumberIndex].en)}
+        async function loadNumberFact(){const n=parseInt(currentNumbers[currentNumberIndex]?.en)||currentNumberIndex+1;try{const r=await fetch(`/api/live/number-fact?number=${n}`);const d=await r.json();if(d.fact)document.getElementById('numberFact').textContent=d.fact}catch(e){}}
+        function toggleNumberRecording(){numberMediaRecorder?.state==='recording'?stopNumberRecording():startNumberRecording()}
+        async function startNumberRecording(){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});numberMediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});numberAudioChunks=[];numberMediaRecorder.ondataavailable=e=>{if(e.data.size>0)numberAudioChunks.push(e.data)};numberMediaRecorder.onstop=async()=>{s.getTracks().forEach(t=>t.stop());if(numberAudioChunks.length>0)await processNumberRecording(new Blob(numberAudioChunks,{type:'audio/webm'}));document.getElementById('numberRecordBtn').classList.remove('recording');document.getElementById('numberRecordBtn').textContent='🎤 Gravar'};numberMediaRecorder.start();document.getElementById('numberRecordBtn').classList.add('recording');document.getElementById('numberRecordBtn').textContent='⏹️ Parar';setTimeout(()=>{if(numberMediaRecorder?.state==='recording')stopNumberRecording()},8000)}catch(e){alert('Erro ao acessar microfone: '+e.message)}}
+        function stopNumberRecording(){if(numberMediaRecorder?.state==='recording')numberMediaRecorder.stop()}
+        async function processNumberRecording(blob){const fd=new FormData();fd.append('audio',blob,'recording.webm');fd.append('expected',currentNumbers[currentNumberIndex].en.split(' ')[0]);try{const r=await(await fetch('/api/analyze',{method:'POST',body:fd})).json();if(r.success)displayNumberScore(r)}catch(e){}}
+        function displayNumberScore(r){const d=document.getElementById('numberScoreDisplay'),c=document.getElementById('numberScoreCircle'),t=document.getElementById('numberScoreText');d.style.display='block';const s=Math.round(r.pronunciation_score||0);c.textContent=s;c.className='score-circle '+(s>=80?'score-high':s>=60?'score-medium':'score-low');t.textContent=s>=80?'✅ Excelente!':s>=60?'👍 Boa!':'💪 Continue!'}
 
-        async function selectDialogTheme(theme){
-            dialogAITheme=theme;dialogAIHistory=[];isDialogActive=true;
-            document.querySelectorAll('.category-card').forEach(c=>c.classList.remove('selected'));document.querySelector(`[data-theme="${theme}"]`)?.classList.add('selected');
-            const roleMap={'Aeroporto':'airline check-in attendant at a busy international airport','Restaurante':'friendly professional waiter at an upscale restaurant','Hotel':'welcoming hotel receptionist at a 5-star hotel','Direções':'helpful local resident giving clear directions','Compras':'knowledgeable sales associate at a department store','Emergência':'calm and caring pharmacist at a drugstore','Cafeteria':'skilled barista at a trendy coffee shop','Transporte':'experienced taxi driver in a major city','Farmácia':'professional pharmacist at a pharmacy','Loja de Roupas':'fashionable salesperson at a clothing boutique','Supermercado':'friendly cashier at a grocery store'};
-            dialogAIRole=roleMap[theme]||'friendly assistant';
-            document.getElementById('dialogChat').innerHTML='';document.getElementById('dialogInputArea').style.display='flex';document.getElementById('dialogActionButtons').style.display='none';document.getElementById('dialogInput').focus();
-            await generateAIAgentResponse('START',dialogAIRole,dialogAITheme)
-        }
+        // Rádio
+        function toggleRadioModal(){const overlay=document.getElementById('radioModalOverlay');if(overlay.classList.contains('show')){closeRadioModal()}else{overlay.classList.add('show');loadRadioStations()}}
+        function closeRadioModal(e){if(e&&e.target!==document.getElementById('radioModalOverlay'))return;stopRadio();document.getElementById('radioModalOverlay').classList.remove('show');document.getElementById('radioBtn').classList.remove('active')}
+        async function loadRadioStations(){const container=document.getElementById('radioStations');container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Carregando estações...</p>';try{const r=await fetch('/api/live/radio-stations?country=united states');const d=await r.json();if(d.stations&&d.stations.length>0){container.innerHTML=d.stations.map((s,i)=>`<div class="radio-station" onclick="playRadio('${s.url.replace(/'/g,"\\'")}',this)" data-url="${s.url.replace(/'/g,"\\'")}"><span class="play-icon">▶️</span><div class="station-info"><div class="station-name">${s.name}</div><div class="station-lang">${s.language||'English'} • ${s.country||'USA'}</div></div></div>`).join('')}else{container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Nenhuma estação encontrada. Tente novamente.</p>'}}catch(e){container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Erro ao carregar. Modo offline.</p>'}}
+        function playRadio(url,el){stopRadio();if(!url)return;currentAudio=new Audio(url);currentAudio.play().catch(()=>{});document.querySelectorAll('.radio-station').forEach(s=>s.classList.remove('playing'));if(el){el.classList.add('playing');el.querySelector('.play-icon').textContent='🔊'}document.getElementById('radioBtn').classList.add('active')}
+        function stopRadio(){if(currentAudio){currentAudio.pause();currentAudio=null}document.querySelectorAll('.radio-station').forEach(s=>{s.classList.remove('playing');s.querySelector('.play-icon').textContent='▶️'})}
 
-        async function generateAIAgentResponse(userMessage,role,theme){
-            const chat=document.getElementById('dialogChat');const typingDiv=document.createElement('div');typingDiv.className='chat-message agent';typingDiv.id='typingIndicator';typingDiv.innerHTML=`<div class="role-label">🤔 Agente pensando...</div><div class="msg-text">...</div>`;chat.appendChild(typingDiv);chat.scrollTop=chat.scrollHeight;
-            try{
-                const response=await fetch('/api/dialogs/dynamic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:theme,role:role,user_message:userMessage==='START'?'Start the conversation naturally as a '+role:userMessage,history:dialogAIHistory,use_live_data:isOnlineMode})});
-                const data=await response.json();const typing=document.getElementById('typingIndicator');if(typing)typing.remove();
-                if(data.success&&data.response){addChatMessage('agent',role.split(' ').slice(0,3).join(' '),data.response,data.translation||'',true);if(data.response)speakText(data.response);dialogAIHistory.push({role:'agent',text:data.response});if(data.tip){const tipDiv=document.createElement('div');tipDiv.className='chat-message agent';tipDiv.innerHTML=`<span style="font-size:0.78em;color:var(--warning)">💡 ${data.tip}</span>`;chat.appendChild(tipDiv)}}
-            }catch(e){const typing=document.getElementById('typingIndicator');if(typing)typing.remove();addChatMessage('agent','Sistema','Sorry, I had a problem. Can you try again?','Desculpe, tive um problema. Pode tentar novamente?')}
-            chat.scrollTop=chat.scrollHeight;document.getElementById('dialogInput').focus()
-        }
-
+        // Diálogos IA
+        async function loadDialogThemes(){try{const d=await(await fetch('/api/dialogs/themes')).json();const icons={'Aeroporto':'✈️','Restaurante':'🍽️','Hotel':'🏨','Direções':'🗺️','Compras':'🛒','Emergência':'🏥','Cafeteria':'☕','Transporte':'🚗','Farmácia':'💊','Loja de Roupas':'👗','Supermercado':'🛒'};document.getElementById('categoriesGrid').innerHTML=d.themes.map(t=>`<div class="category-card" onclick="selectDialogTheme('${t}')" data-theme="${t}"><span class="icon">${icons[t]||'💬'}</span><div class="name">${t}</div></div>`).join('');resetDialogState()}catch(e){}}
+        function resetDialogState(){dialogAIHistory=[];dialogAIRole='';dialogAITheme='';isDialogActive=false;document.getElementById('dialogChat').innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">🤖</div><p style="font-size:1.1em;font-weight:600">Selecione um tema para começar</p></div>`;document.getElementById('dialogInputArea').style.display='none';document.getElementById('dialogActionButtons').style.display='none'}
+        async function selectDialogTheme(theme){dialogAITheme=theme;dialogAIHistory=[];isDialogActive=true;document.querySelectorAll('.category-card').forEach(c=>c.classList.remove('selected'));document.querySelector(`[data-theme="${theme}"]`)?.classList.add('selected');const roleMap={'Aeroporto':'airline check-in attendant','Restaurante':'friendly professional waiter','Hotel':'welcoming hotel receptionist','Direções':'helpful local resident','Compras':'knowledgeable sales associate','Emergência':'calm and caring pharmacist','Cafeteria':'skilled barista','Transporte':'experienced taxi driver','Farmácia':'professional pharmacist','Loja de Roupas':'fashionable salesperson','Supermercado':'friendly cashier'};dialogAIRole=roleMap[theme]||'friendly assistant';document.getElementById('dialogChat').innerHTML='';document.getElementById('dialogInputArea').style.display='flex';document.getElementById('dialogActionButtons').style.display='none';document.getElementById('dialogInput').focus();await generateAIAgentResponse('START',dialogAIRole,dialogAITheme)}
+        async function generateAIAgentResponse(userMessage,role,theme){const chat=document.getElementById('dialogChat');const typingDiv=document.createElement('div');typingDiv.className='chat-message agent';typingDiv.id='typingIndicator';typingDiv.innerHTML=`<div class="role-label">🤔 Agente pensando...</div><div class="msg-text">...</div>`;chat.appendChild(typingDiv);chat.scrollTop=chat.scrollHeight;try{const response=await fetch('/api/dialogs/dynamic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:theme,role:role,user_message:userMessage==='START'?'Start naturally as a '+role:userMessage,history:dialogAIHistory,use_live_data:isOnlineMode})});const data=await response.json();const typing=document.getElementById('typingIndicator');if(typing)typing.remove();if(data.success&&data.response){addChatMessage('agent',role.split(' ').slice(0,3).join(' '),data.response,data.translation||'',true);if(data.response)speakText(data.response);dialogAIHistory.push({role:'agent',text:data.response});if(data.tip){const tipDiv=document.createElement('div');tipDiv.className='chat-message agent';tipDiv.innerHTML=`<span style="font-size:0.78em;color:var(--warning)">💡 ${data.tip}</span>`;chat.appendChild(tipDiv)}}}catch(e){const typing=document.getElementById('typingIndicator');if(typing)typing.remove();addChatMessage('agent','Sistema','Sorry, try again.','Desculpe, tente novamente.')}chat.scrollTop=chat.scrollHeight;document.getElementById('dialogInput').focus()}
         async function submitDialogResponse(){const input=document.getElementById('dialogInput'),userText=input.value.trim();if(!userText||!isDialogActive)return;addChatMessage('user','Você',userText);dialogAIHistory.push({role:'user',text:userText});input.value='';await generateAIAgentResponse(userText,dialogAIRole,dialogAITheme)}
-
-        function addChatMessage(type,role,text,translation='',btn=false){
-            const chat=document.getElementById('dialogChat');const d=document.createElement('div');d.className=`chat-message ${type}`;
-            d.innerHTML=`<div class="role-label">${role}</div><div class="msg-text">${text}</div>${translation?`<div class="msg-translation">${translation}</div>`:''}${btn?`<button class="listen-btn" onclick="speakText('${text.replace(/'/g,"\\'")}')">🔊</button>`:''}`;
-            chat.appendChild(d);chat.scrollTop=chat.scrollHeight
-        }
-
+        function addChatMessage(type,role,text,translation='',btn=false){const chat=document.getElementById('dialogChat');const d=document.createElement('div');d.className=`chat-message ${type}`;d.innerHTML=`<div class="role-label">${role}</div><div class="msg-text">${text}</div>${translation?`<div class="msg-translation">${translation}</div>`:''}${btn?`<button class="listen-btn" onclick="speakText('${text.replace(/'/g,"\\'")}')">🔊</button>`:''}`;chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
         function resetDialog(){if(dialogAITheme)selectDialogTheme(dialogAITheme)}
 
-        // ============================================================
-        // CONVERSA LIVRE
-        // ============================================================
-        async function sendFreeChat(){
-            const input=document.getElementById('freeChatInput'),message=input.value.trim(),context=document.getElementById('chatContext').value;
-            if(!message)return;
-            addFreeChatMessage('user','Você',message);input.value='';freeChatHistory.push({role:'user',text:message});
-            try{const d=await(await fetch('/api/dialogs/free-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,context,history:freeChatHistory,use_live_data:isOnlineMode})})).json();addFreeChatMessage('agent','Tutor',d.response,d.translation,d.tip);freeChatHistory.push({role:'assistant',text:d.response});if(d.response)speakText(d.response)}catch(e){addFreeChatMessage('agent','Tutor','Sorry, try again.','Desculpe, tente novamente.')}
-        }
-        function addFreeChatMessage(type,role,text,translation='',tip=''){
-            const container=document.getElementById('freeChatMessages'),empty=container.querySelector('div[style]');if(empty&&empty.textContent.includes('Converse livremente'))empty.remove();
-            const d=document.createElement('div');d.className=`chat-message ${type}`;
-            d.innerHTML=`<div class="role-label">${role}</div><div class="msg-text">${text}</div>${translation?`<div class="msg-translation">${translation}</div>`:''}${tip?`<div style="font-size:0.75em;color:var(--warning);margin-top:4px">💡 ${tip}</div>`:''}${type==='agent'?`<button class="listen-btn" onclick="speakText('${text.replace(/'/g,"\\'")}')">🔊</button>`:''}`;
-            container.appendChild(d);container.scrollTop=container.scrollHeight
-        }
-        function resetFreeChat(){freeChatHistory=[];document.getElementById('freeChatMessages').innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">💬</div><p style="font-size:1.1em;font-weight:600">Converse livremente com o tutor IA!</p><p style="font-size:0.85em">Escolha um contexto e comece a digitar em inglês</p></div>`}
+        // Conversa Livre
+        async function sendFreeChat(){const input=document.getElementById('freeChatInput'),message=input.value.trim(),context=document.getElementById('chatContext').value;if(!message)return;addFreeChatMessage('user','Você',message);input.value='';freeChatHistory.push({role:'user',text:message});try{const d=await(await fetch('/api/dialogs/free-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,context,history:freeChatHistory,use_live_data:isOnlineMode})})).json();addFreeChatMessage('agent','Tutor',d.response,d.translation,d.tip);freeChatHistory.push({role:'assistant',text:d.response});if(d.response)speakText(d.response)}catch(e){addFreeChatMessage('agent','Tutor','Sorry, try again.','Desculpe.')}}
+        function addFreeChatMessage(type,role,text,translation='',tip=''){const container=document.getElementById('freeChatMessages'),empty=container.querySelector('div[style]');if(empty&&empty.textContent.includes('Converse livremente'))empty.remove();const d=document.createElement('div');d.className=`chat-message ${type}`;d.innerHTML=`<div class="role-label">${role}</div><div class="msg-text">${text}</div>${translation?`<div class="msg-translation">${translation}</div>`:''}${tip?`<div style="font-size:0.75em;color:var(--warning);margin-top:4px">💡 ${tip}</div>`:''}${type==='agent'?`<button class="listen-btn" onclick="speakText('${text.replace(/'/g,"\\'")}')">🔊</button>`:''}`;container.appendChild(d);container.scrollTop=container.scrollHeight}
+        function resetFreeChat(){freeChatHistory=[];document.getElementById('freeChatMessages').innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:40px"><div style="font-size:3.5em">💬</div><p style="font-size:1.1em;font-weight:600">Converse livremente!</p></div>`}
 
-        // ============================================================
-        // PRONÚNCIA
-        // ============================================================
-        function loadPronunciationPhrases(){
-            const level=document.getElementById('phraseLevel').value;
-            const phrasesByLevel={beginner:[{text:"Hello, how are you today?",phonetic:"/həˈloʊ, haʊ ɑːr juː təˈdeɪ?/",focus:"greetings",tip:"O 'h' de hello é suave, quase mudo"},{text:"My name is John.",phonetic:"/maɪ neɪm ɪz dʒɑːn/",focus:"introductions",tip:"O 'y' de my parece 'ai' em português"},{text:"Where is the bathroom?",phonetic:"/wer ɪz ðə ˈbæθ.ruːm?/",focus:"questions",tip:"O 'th' de bathroom: língua entre os dentes"},{text:"I would like a coffee please.",phonetic:"/aɪ wʊd laɪk ə ˈkɔː.fi pliːz/",focus:"requests",tip:"'Would' não pronuncia o 'l'"},{text:"What time is it?",phonetic:"/wʌt taɪm ɪz ɪt?/",focus:"time",tip:"O 't' de what é mudo"},{text:"How much does this cost?",phonetic:"/haʊ mʌtʃ dʌz ðɪs kɔːst?/",focus:"shopping",tip:"'Much' tem som de 'tch'"},{text:"Can you help me please?",phonetic:"/kæn juː help miː pliːz?/",focus:"help",tip:"'Can' tem som de 'ken'"},{text:"I don't understand.",phonetic:"/aɪ doʊnt ˌʌn.dərˈstænd/",focus:"clarification",tip:"O 't' de don't é pausa sutil"},{text:"Nice to meet you.",phonetic:"/naɪs tuː miːt juː/",focus:"social",tip:"'To' vira 'tə' em fala rápida"},{text:"See you later!",phonetic:"/siː juː ˈleɪ.tər/",focus:"goodbyes",tip:"O 't' de later vira 'd' suave"}],intermediate:[{text:"I've been studying English for three years.",phonetic:"/aɪv bɪn ˈstʌd.i.ɪŋ ˈɪŋ.ɡlɪʃ fɔːr θriː jɪrz/",focus:"present_perfect",tip:"O 'th' de three: língua entre os dentes"},{text:"Could you tell me how to get to the station?",phonetic:"/kʊd juː tel miː haʊ tə ɡet tə ðə ˈsteɪ.ʃən?/",focus:"directions",tip:"'Could' tem o 'l' mudo"},{text:"I'm looking forward to hearing from you.",phonetic:"/aɪm ˈlʊk.ɪŋ ˈfɔːr.wərd/",focus:"business",tip:"O 'ng' é um som só"},{text:"Would you mind opening the window?",phonetic:"/wʊd juː maɪnd/",focus:"polite_requests",tip:"'Mind' tem 'i' longo"}],advanced:[{text:"Nevertheless, I believe we should reconsider our approach.",phonetic:"/ˌnev.ər.ðəˈles/",focus:"business_vocabulary",tip:"4 sílabas: ne-ver-the-less"},{text:"The implications of this research are significant.",phonetic:"/ði ˌɪm.plɪˈkeɪ.ʃənz/",focus:"academic",tip:"'Implications' tem 4 sílabas"}],business:[{text:"I'm following up on the proposal we discussed last week.",phonetic:"/aɪm ˈfɑː.loʊ.ɪŋ ʌp/",focus:"follow_up",tip:"'Proposal': pro-PO-sal"},{text:"We need to touch base on the quarterly results.",phonetic:"/wiː niːd tə tʌtʃ beɪs/",focus:"meetings",tip:"'Touch base' = conversar rapidamente"}],travel:[{text:"Is there a shuttle from the airport to downtown?",phonetic:"/ɪz ðer ə ˈʃʌt.əl/",focus:"transport",tip:"'Shuttle' tem 'sh' suave"},{text:"I'd like to book a room with a view of the ocean.",phonetic:"/aɪd laɪk tə bʊk/",focus:"hotel",tip:"'View' é como 'viú'"}]};
-            currentPhrases=phrasesByLevel[level]||phrasesByLevel.beginner;currentPhraseIndex=0;
-            if(currentPhrases.length>0){displayPronunciationPhrase(currentPhrases[0]);document.getElementById('phraseScoreDisplay').style.display='none'}
-            document.getElementById('phraseCounter').textContent=`Frase 1 de ${currentPhrases.length} • ${level}`
-        }
+        // Pronúncia
+        function loadPronunciationPhrases(){const level=document.getElementById('phraseLevel').value;const phrasesByLevel={beginner:[{text:"Hello, how are you today?",phonetic:"/həˈloʊ/",focus:"greetings",tip:"O 'h' de hello é suave"},{text:"My name is John.",phonetic:"/maɪ neɪm ɪz/",focus:"introductions",tip:"'y' de my = 'ai'"}],intermediate:[{text:"I've been studying English for three years.",phonetic:"/aɪv bɪn/",focus:"present_perfect",tip:"'th' = língua entre dentes"}],advanced:[{text:"Nevertheless, I believe we should reconsider.",phonetic:"/ˌnev.ər.ðəˈles/",focus:"business_vocabulary",tip:"4 sílabas"}],business:[{text:"I'm following up on the proposal.",phonetic:"/aɪm ˈfɑː.loʊ.ɪŋ/",focus:"follow_up",tip:"'Proposal' = pro-PO-sal"}],travel:[{text:"Is there a shuttle to downtown?",phonetic:"/ɪz ðer ə ˈʃʌt.əl/",focus:"transport",tip:"'Shuttle' tem 'sh' suave"}]};currentPhrases=phrasesByLevel[level]||phrasesByLevel.beginner;currentPhraseIndex=0;if(currentPhrases.length>0){displayPronunciationPhrase(currentPhrases[0]);document.getElementById('phraseScoreDisplay').style.display='none'}document.getElementById('phraseCounter').textContent=`Frase 1 de ${currentPhrases.length} • ${level}`}
         function displayPronunciationPhrase(p){document.getElementById('phraseText').textContent=p.text;document.getElementById('phoneticText').textContent=p.phonetic||'';document.getElementById('phraseTip').textContent=p.tip?`💡 ${p.tip}`:'';document.getElementById('phraseFocus').textContent=p.focus?`Foco: ${p.focus.replace(/_/g,' ')}`:'';document.getElementById('phraseScoreDisplay').style.display='none'}
-        function nextPronunciationPhrase(){currentPhraseIndex++;if(currentPhraseIndex>=currentPhrases.length)currentPhraseIndex=0;displayPronunciationPhrase(currentPhrases[currentPhraseIndex]);document.getElementById('phraseScoreDisplay').style.display='none'}
+        function nextPronunciationPhrase(){currentPhraseIndex++;if(currentPhraseIndex>=currentPhrases.length)currentPhraseIndex=0;displayPronunciationPhrase(currentPhrases[currentPhraseIndex])}
         function togglePhraseRecording(){phraseMediaRecorder?.state==='recording'?stopPhraseRecording():startPhraseRecording()}
-        async function startPhraseRecording(){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});phraseMediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});phraseAudioChunks=[];phraseMediaRecorder.ondataavailable=e=>{if(e.data.size>0)phraseAudioChunks.push(e.data)};phraseMediaRecorder.onstop=async()=>{s.getTracks().forEach(t=>t.stop());if(phraseAudioChunks.length>0)await processPhraseRecording(new Blob(phraseAudioChunks,{type:'audio/webm'}));document.getElementById('phraseRecordBtn').classList.remove('recording');document.getElementById('phraseRecordBtn').textContent='🎤 Gravar'};phraseMediaRecorder.start();document.getElementById('phraseRecordBtn').classList.add('recording');document.getElementById('phraseRecordBtn').textContent='⏹️ Parar';setTimeout(()=>{if(phraseMediaRecorder?.state==='recording')stopPhraseRecording()},10000)}catch(e){alert('Erro ao acessar microfone: '+e.message)}}
+        async function startPhraseRecording(){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});phraseMediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});phraseAudioChunks=[];phraseMediaRecorder.ondataavailable=e=>{if(e.data.size>0)phraseAudioChunks.push(e.data)};phraseMediaRecorder.onstop=async()=>{s.getTracks().forEach(t=>t.stop());if(phraseAudioChunks.length>0)await processPhraseRecording(new Blob(phraseAudioChunks,{type:'audio/webm'}));document.getElementById('phraseRecordBtn').classList.remove('recording');document.getElementById('phraseRecordBtn').textContent='🎤 Gravar'};phraseMediaRecorder.start();document.getElementById('phraseRecordBtn').classList.add('recording');document.getElementById('phraseRecordBtn').textContent='⏹️ Parar';setTimeout(()=>{if(phraseMediaRecorder?.state==='recording')stopPhraseRecording()},10000)}catch(e){alert('Erro ao microfone: '+e.message)}}
         function stopPhraseRecording(){if(phraseMediaRecorder?.state==='recording')phraseMediaRecorder.stop()}
         async function processPhraseRecording(blob){const fd=new FormData();fd.append('audio',blob,'recording.webm');fd.append('expected',currentPhrases[currentPhraseIndex].text);try{const r=await(await fetch('/api/analyze',{method:'POST',body:fd})).json();if(r.success)displayPhraseScore(r)}catch(e){}}
-        function displayPhraseScore(r){const d=document.getElementById('phraseScoreDisplay'),c=document.getElementById('phraseScoreCircle'),t=document.getElementById('phraseScoreText');d.style.display='block';const s=Math.round(r.pronunciation_score||0);c.textContent=s;c.className='score-circle '+(s>=80?'score-high':s>=60?'score-medium':'score-low');t.textContent=r.feedback?.correction||(s>=80?'✅ Excelente!':s>=60?'👍 Boa!':'💪 Continue!')}
+        function displayPhraseScore(r){const d=document.getElementById('phraseScoreDisplay'),c=document.getElementById('phraseScoreCircle'),t=document.getElementById('phraseScoreText');d.style.display='block';const s=Math.round(r.pronunciation_score||0);c.textContent=s;c.className='score-circle '+(s>=80?'score-high':s>=60?'score-medium':'score-low');t.textContent=s>=80?'✅ Excelente!':s>=60?'👍 Boa!':'💪 Continue!'}
 
         init();
     </script>

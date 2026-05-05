@@ -148,6 +148,27 @@ async def live_status():
         "picsum": False,
     }
     
+
+@router.get("/time")
+async def get_world_time(timezone: str = Query("America/New_York")):
+    """Busca hora atual em qualquer fuso horário"""
+    result = await web_services.get_world_time(timezone)
+    return JSONResponse({"success": True, **result})
+
+
+@router.get("/number-fact")
+async def get_number_fact(number: int = Query(7, ge=0, le=9999)):
+    """Busca curiosidade sobre um número"""
+    result = await web_services.get_number_fact(number)
+    return JSONResponse(result)
+
+
+@router.get("/radio-stations")
+async def get_radio_stations(country: str = Query("united states", description="País em inglês")):
+    """Busca estações de rádio de um país"""
+    stations = await web_services.get_radio_stations(country)
+    return JSONResponse({"success": True, "stations": stations, "country": country})
+
     try:
         async with aiohttp.ClientSession() as session:
             # Testa REST Countries

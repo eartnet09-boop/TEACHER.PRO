@@ -338,6 +338,113 @@ class WebServices:
             key_terms=[topic],
             difficulty_level="beginner"
         )
+
+
+    # ================================================================
+    # WORLD TIME API - Hora global (Grátis, sem key)
+    # ================================================================
+    
+    async def get_world_time(self, timezone: str = "America/New_York") -> dict:
+        """
+        Busca hora atual em qualquer fuso horário.
+        API: https://worldtimeapi.org (grátis, sem autenticação)
+        """
+        try:
+            session = await self._get_session()
+            url = f"https://worldtimeapi.org/api/timezone/{timezone}"
+            
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    dt = data["datetime"]
+                    return {
+                        "success": True,
+                        "timezone": timezone,
+                        "datetime": dt,
+                        "time": dt[11:16],
+                        "date": dt[:10],
+                        "formatted": f"It's {dt[11:16]} in {timezone.split('/')[-1].replace('_', ' ')}"
+                    }
+        except Exception as e:
+            logger.warning(f"Falha ao buscar hora: {e}")
+        
+        return {
+            "success": True,
+            "formatted": "It's about 3:30 PM",
+            "source": "fallback"
+        }
+    
+    # ================================================================
+    # NUMBERS API - Curiosidades numéricas (Grátis, sem key)
+    # ================================================================
+    
+    async def get_number_fact(self, number: int = 7) -> dict:
+        """
+        Busca curiosidade sobre um número.
+        API: http://numbersapi.com (grátis, sem autenticação)
+        """
+        try:
+            session = await self._get_session()
+            url = f"http://numbersapi.com/{number}/trivia?json"
+            
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {
+                        "success": True,
+                        "number": number,
+                        "fact": data["text"]
+                    }
+        except Exception as e:
+            logger.warning(f"Falha ao buscar fato numérico: {e}")
+        
+        facts = {
+            1: "1 is the number of moons that orbit Earth.",
+            2: "2 is the number of eyes most animals have.",
+            7: "7 is the number of days in a week.",
+            12: "12 is the number of inches in a foot.",
+            24: "24 is the number of hours in a day.",
+            365: "365 is the number of days in a year (usually).",
+        }
+        return {
+            "success": True,
+            "number": number,
+            "fact": facts.get(number, f"{number} is a number."),
+            "source": "fallback"
+        }
+    
+    # ================================================================
+    # RADIO BROWSER API - Estações de rádio (Grátis, sem key)
+    # ================================================================
+    
+    async def get_radio_stations(self, country: str = "united states", limit: int = 5) -> list:
+        """
+        Busca estações de rádio de um país.
+        API: https://de1.api.radio-browser.info (grátis, sem autenticação)
+        """
+        try:
+            session = await self._get_session()
+            url = f"https://de1.api.radio-browser.info/json/stations/bycountry/{country}?limit={limit}"
+            
+            async with session.get(url) as response:
+                if response.status == 200:
+                    stations = await response.json()
+                    return [
+                        {
+                            "name": s["name"],
+                            "url": s["url_resolved"],
+                            "language": s.get("language", "English"),
+                            "country": s.get("country", country)
+                        }
+                        for s in stations[:limit]
+                    ]
+        except Exception as e:
+            logger.warning(f"Falha ao buscar rádios: {e}")
+        
+        return [
+            {"name": "BBC World Service", "url": "", "language": "English", "country": "UK", "source": "fallback"},
+            {"name": "NPR News", "url": "", "language": "English", "country": "USA", "source": "fallback"},
+        ]    
     
     # ================================================================
     # LIMPEZA
