@@ -1,6 +1,6 @@
 # src/llm/dialog_engine.py
 """
-Motor de Diálogos com IA - English Teacher Agent v4.1
+Motor de Diálogos com IA - English Teacher Agent v4.2
 Gera respostas naturais e contextualizadas usando Qwen via Ollama.
 Suporte a modo híbrido com dados online em tempo real.
 """
@@ -8,7 +8,7 @@ Suporte a modo híbrido com dados online em tempo real.
 import json
 import logging
 import aiohttp
-from typing import Optional
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +19,26 @@ class DialogEngine:
     
     Características:
     - Personagens realistas que mantêm o papel estritamente
+    - Respostas SEMPRE em inglês (com instrução reforçada)
     - Integração com dados online (clima, cultura, cotação)
     - Fallback offline transparente
     - Correção sutil de erros do aluno
     - Respostas curtas e naturais (estilo conversação real)
+    - Parse robusto de JSON com fallback inteligente
     """
     
+    # Constantes
+    OLLAMA_HOST = "http://localhost:11434"
+    MODEL_NAME = "qwen2.5-coder:3b"
+    MAX_HISTORY_MESSAGES = 12
+    TEMPERATURE = 0.6
+    NUM_PREDICT = 200
+    TOP_P = 0.92
+    REPEAT_PENALTY = 1.15
+    TIMEOUT_SECONDS = 20
+    MAX_RESPONSE_LENGTH = 250
+    
     def __init__(self):
-        self.ollama_host = "http://localhost:11434"
-        self.model = "qwen2.5-coder:3b"
         self._context_engine: Optional[object] = None
         self._context_engine_loaded: bool = False
     
@@ -78,15 +89,15 @@ class DialogEngine:
                 "live_data_used": bool
             }
         """
-        # --- 1. Constrói histórico formatado ---
+        # 1. Formata histórico
         history_text = self._format_history(conversation_history)
         
-        # --- 2. Busca dados online (modo híbrido) ---
+        # 2. Busca dados online (modo híbrido)
         live_context_prompt, live_data_used = await self._fetch_live_context(
             theme, use_live_data
         )
         
-        # --- 3. Constrói prompt otimizado ---
+        # 3. Constrói prompt otimizado
         prompt = self._build_prompt(
             theme=theme,
             role=role,
@@ -95,42 +106,54 @@ class DialogEngine:
             live_context_prompt=live_context_prompt
         )
         
-        # --- 4. Gera resposta via Ollama ---
+        # 4. Gera resposta via Ollama
         result = await self._call_ollama(prompt)
         
-        # --- 5. Adiciona metadados ---
+        # 5. Valida e sanitiza resposta
+        result = self._validate_response(result)
+        
+        # 6. Adiciona metadados
         result["live_data_used"] = live_data_used
         
         logger.debug(
-            f"Resposta gerada para '{theme}' | "
-            f"live_data={'sim' if live_data_used else 'não'} | "
+            f"📝 Resposta gerada | tema={theme} | "
+            f"live={'sim' if live_data_used else 'não'} | "
             f"tamanho={len(result.get('response',''))} caracteres"
         )
         
         return result
     
     # ================================================================
-    # MÉTODOS AUXILIARES PRIVADOS
+    # FORMATAÇÃO DE HISTÓRICO
     # ================================================================
     
     def _format_history(self, history: list) -> str:
-        """Formata histórico da conversa para o prompt"""
+        """
+        Formata histórico da conversa para o prompt.
+        Mantém apenas as últimas N mensagens para contexto.
+        """
         if not history:
-            return "(new conversation)"
+            return "(new conversation - no prior messages)"
         
         lines = []
-        for msg in history[-12:]:  # Últimas 8 mensagens
-            prefix = "Agent" if msg.get("role") == "agent" else "Student"
-            lines.append(f"{prefix}: {msg.get('text', '')}")
+        for msg in history[-self.MAX_HISTORY_MESSAGES:]:
+            role_label = "Agent" if msg.get("role") == "agent" else "Student"
+            text = msg.get("text", "").strip()
+            if text:
+                lines.append(f"{role_label}: {text}")
         
-        return "\n".join(lines)
+        return "\n".join(lines) if lines else "(empty conversation)"
     
-    async def _fetch_live_context(self, theme: str, use_live_data: bool) -> tuple:
+    # ================================================================
+    # CONTEXTO ONLINE (MODO HÍBRIDO)
+    # ================================================================
+    
+    async def _fetch_live_context(self, theme: str, use_live_data: bool) -> Tuple[str, bool]:
         """
-        Busca dados online para enriquecer o contexto.
+        Busca dados online para enriquecer o contexto do diálogo.
         
         Returns:
-            tuple: (context_prompt: str, live_data_used: bool)
+            Tuple[str, bool]: (prompt_text, data_was_used)
         """
         if not use_live_data:
             return "", False
@@ -147,7 +170,7 @@ class DialogEngine:
             
             if context and context.contextual_prompt:
                 prompt = (
-                    f"\n🌐 REAL-TIME DATA (incorporate naturally):\n"
+                    f"\n🌐 REAL-TIME CONTEXT (incorporate naturally):\n"
                     f"{context.contextual_prompt}\n"
                 )
                 logger.info(f"📡 Dados online integrados ao diálogo '{theme}'")
@@ -158,6 +181,10 @@ class DialogEngine:
         
         return "", False
     
+    # ================================================================
+    # CONSTRUÇÃO DO PROMPT
+    # ================================================================
+    
     def _build_prompt(
         self,
         theme: str,
@@ -167,18 +194,32 @@ class DialogEngine:
         live_context_prompt: str
     ) -> str:
         """
-        Constrói o prompt para o Ollama com instruções detalhadas.
-        O prompt é projetado para manter o personagem estritamente no papel.
+        Constrói o prompt para o Ollama com instruções reforçadas.
+        O prompt é projetado para:
+        1. Garantir resposta em INGLÊS (nunca português)
+        2. Manter o personagem estritamente no papel
+        3. Gerar respostas naturais e curtas
         """
-        # Determina se é início de conversa
         is_start = user_message.upper() == "START"
         user_line = "" if is_start else f'Student just said: "{user_message}"'
         start_instruction = (
-            "Start the conversation naturally as this character would in a real situation."
+            "INITIATE the conversation naturally as this character would in a real situation. "
+            "Greet the student appropriately for the context."
             if is_start else ""
         )
         
-        return f"""You are ROLEPLAYING as a {role}.
+        return f"""SYSTEM: You are an AI roleplaying as a {role}.
+This is a language learning exercise for a Brazilian student.
+
+CRITICAL RULES - VIOLATION IS UNACCEPTABLE:
+1. LANGUAGE: You MUST respond in ENGLISH only. Portuguese is STRICTLY FORBIDDEN in your "response" field.
+2. CHARACTER: You ARE a {role}. Never break character under any circumstances.
+3. REALISM: Speak EXACTLY as this person would in real life.
+4. BREVITY: Keep responses between 8 and 25 words maximum.
+5. RELEVANCE: React directly to what the student just said.
+6. CORRECTION: If the student makes an error, subtly use the correct form in YOUR response.
+7. CONTEXT: Stay within the {theme} context - do NOT change topics.
+8. CONTINUITY: NEVER restart or re-greet unless the student explicitly leaves and comes back.
 
 CONTEXT: {theme}
 {live_context_prompt}
@@ -187,99 +228,168 @@ CONVERSATION HISTORY:
 {user_line}
 {start_instruction}
 
-CHARACTER RULES (MUST FOLLOW):
-1. You ARE a {role}. Never break character.
-2. Speak EXACTLY as this person would in real life.
-3. Use common phrases and vocabulary a real {role} uses daily.
-4. Respond in English ONLY (10-25 words maximum).
-5. React directly to what the student said.
-6. If the student makes a grammar or vocabulary error, subtly use the correct form in your response (do NOT explicitly correct them unless they ask).
-7. Stay within the {theme} context - do NOT change topics randomly.
-8. NEVER restart the conversation or re-greet the guest unless they explicitly leave and come back.
+IMPORTANT: Your "response" field MUST be in ENGLISH. The "translation" field should be in Portuguese.
 
-CONVERSATION FLOW:
-- If this is the start, greet the student as a real {role} would.
-- After your response, naturally invite the student to respond.
-- Keep the conversation moving forward logically.
+Respond ONLY with a valid JSON object (no other text, no markdown, no code blocks):
+{{"response": "your in-character ENGLISH response here", "translation": "sua tradução em PORTUGUÊS aqui", "tip": "brief correction tip ONLY if student made a clear error, otherwise leave empty"}}"""
 
-Respond ONLY with a valid JSON object:
-{{"response": "your in-character English response", "translation": "Brazilian Portuguese translation of your response", "tip": "brief correction tip ONLY if student made a clear error, otherwise empty string"}}"""
-
+    # ================================================================
+    # CHAMADA À API OLLAMA
+    # ================================================================
+    
     async def _call_ollama(self, prompt: str) -> dict:
         """
         Chama a API do Ollama para gerar resposta.
-        Inclui timeout, retry e fallback offline.
+        Inclui timeout, tratamento de erros e fallback offline.
         """
         try:
             async with aiohttp.ClientSession() as session:
                 payload = {
-                    "model": self.model,
+                    "model": self.MODEL_NAME,
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.6,   # Equilíbrio entre criatividade e consistência
-                        "num_predict": 180,    # Suficiente para resposta + JSON
-                        "top_p": 0.92,
-                        "repeat_penalty": 1.1  # Evita repetições
+                        "temperature": self.TEMPERATURE,
+                        "num_predict": self.NUM_PREDICT,
+                        "top_p": self.TOP_P,
+                        "repeat_penalty": self.REPEAT_PENALTY
                     }
                 }
                 
                 async with session.post(
-                    f"{self.ollama_host}/api/generate",
+                    f"{self.OLLAMA_HOST}/api/generate",
                     json=payload,
-                    timeout=aiohttp.ClientTimeout(total=20)
+                    timeout=aiohttp.ClientTimeout(total=self.TIMEOUT_SECONDS)
                 ) as resp:
                     if resp.status == 200:
                         result = await resp.json()
                         text = result.get("response", "")
+                        logger.debug(f"Ollama respondeu em {len(text)} caracteres")
                         return self._parse_response(text)
                     else:
-                        logger.error(f"Ollama retornou HTTP {resp.status}")
+                        logger.error(f"❌ Ollama retornou HTTP {resp.status}")
                         
         except aiohttp.ClientError as e:
             logger.warning(f"🔌 Ollama indisponível: {e}")
+        except aiohttp.ServerTimeoutError:
+            logger.error("⏰ Timeout ao chamar Ollama")
         except Exception as e:
-            logger.error(f"❌ Erro ao chamar Ollama: {e}")
+            logger.error(f"❌ Erro inesperado ao chamar Ollama: {e}")
         
-        # Fallback offline total
         return self._fallback_response()
+    
+    # ================================================================
+    # PARSE DA RESPOSTA
+    # ================================================================
     
     def _parse_response(self, text: str) -> dict:
         """
         Extrai JSON da resposta do Ollama.
-        Lida com casos onde o modelo retorna texto fora do JSON.
+        Lida com casos onde o modelo retorna:
+        - JSON puro
+        - JSON dentro de markdown (```json ... ```)
+        - Texto fora do JSON
+        - Campos ausentes
         """
         # Tenta extrair JSON da resposta
         try:
-            start = text.find('{')
-            end = text.rfind('}') + 1
+            # Remove markdown code blocks se existirem
+            clean_text = text.strip()
+            if clean_text.startswith("```"):
+                clean_text = clean_text.split("```")[1]
+                if clean_text.startswith("json"):
+                    clean_text = clean_text[4:]
+                clean_text = clean_text.strip()
+            
+            start = clean_text.find('{')
+            end = clean_text.rfind('}') + 1
+            
             if start >= 0 and end > start:
-                data = json.loads(text[start:end])
+                data = json.loads(clean_text[start:end])
                 
-                # Valida campos obrigatórios
+                response = data.get("response", "").strip()
+                translation = data.get("translation", "").strip()
+                tip = data.get("tip", "").strip()
+                
+                # Se a resposta veio em português, tenta extrair algo útil
+                if response and not self._is_english(response):
+                    logger.warning(f"⚠️ Resposta não está em inglês: '{response[:50]}...'")
+                    # Usa a resposta como tradução e gera fallback
+                    return {
+                        "response": "I understand. How can I help you?",
+                        "translation": response[:self.MAX_RESPONSE_LENGTH],
+                        "tip": tip[:200] if tip else ""
+                    }
+                
                 return {
-                    "response": data.get("response", "").strip()[:250],
-                    "translation": data.get("translation", "").strip()[:250],
-                    "tip": data.get("tip", "").strip()[:200]
+                    "response": response[:self.MAX_RESPONSE_LENGTH],
+                    "translation": translation[:self.MAX_RESPONSE_LENGTH] if translation else "",
+                    "tip": tip[:200] if tip else ""
                 }
-        except (json.JSONDecodeError, KeyError, AttributeError):
-            pass
+                
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            logger.warning(f"⚠️ Falha ao parsear JSON: {e}")
         
-        # Se não conseguiu extrair JSON, usa o texto como resposta
+        # Fallback: usa o texto como resposta
         cleaned = text.strip()
-        # Remove caracteres não-JSON comuns
-        for char in ['`', '{', '}', '"']:
+        for char in ['`', '{', '}', '"', '\\']:
             cleaned = cleaned.replace(char, '')
+        cleaned = cleaned.replace('json', '').strip()
         
-        return {
-            "response": cleaned[:200] if cleaned else "I understand. How can I help you?",
-            "translation": "",
-            "tip": ""
-        }
+        if cleaned and self._is_english(cleaned):
+            return {
+                "response": cleaned[:self.MAX_RESPONSE_LENGTH],
+                "translation": "",
+                "tip": ""
+            }
+        
+        return self._fallback_response()
+    
+    def _is_english(self, text: str) -> bool:
+        """
+        Verifica se o texto está em inglês usando heurísticas simples.
+        """
+        if not text:
+            return False
+        
+        # Palavras comuns em português que NÃO deveriam aparecer
+        portuguese_markers = [
+            'você', 'para', 'como', 'uma', 'aqui', 'isso', 'não', 'mais',
+            'muito', 'bem', 'bom', 'boa', 'dia', 'noite', 'olá', 'oi',
+            'obrigado', 'obrigada', 'por favor', 'prazer', 'tchau'
+        ]
+        
+        text_lower = text.lower()
+        for marker in portuguese_markers:
+            if marker in text_lower:
+                return False
+        
+        # Se tem mais de 3 palavras e nenhuma em português, assume inglês
+        return True
+    
+    def _validate_response(self, result: dict) -> dict:
+        """
+        Valida e sanitiza a resposta final.
+        Garante que a resposta está em inglês.
+        """
+        response = result.get("response", "")
+        
+        # Se a resposta está vazia ou em português
+        if not response or not self._is_english(response):
+            logger.warning("⚠️ Resposta inválida detectada, usando fallback")
+            fallback = self._fallback_response()
+            fallback["translation"] = response if response else fallback["translation"]
+            return fallback
+        
+        return result
+    
+    # ================================================================
+    # FALLBACK
+    # ================================================================
     
     def _fallback_response(self) -> dict:
         """
-        Resposta de fallback quando tudo falha.
+        Resposta de fallback quando Ollama falha.
         Mantém o tom profissional e encorajador.
         """
         return {
