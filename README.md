@@ -1,198 +1,190 @@
-# 🎧 English Teacher Agent
+# 🎧 TEACHER.PRO v4.2
 
-**Professor de Inglês por IA - 100% Offline e Privado**
+**Tutor de Inglês com Inteligência Artificial — 100% Offline e Privado**
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Version](https://img.shields.io/badge/version-4.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.11+-green)
-![License](https://img.shields.io/badge/license-MIT-orange)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey)
+![AI Models](https://img.shields.io/badge/AI%20Models-4-orange)
+![Tests](https://img.shields.io/badge/tests-47%20passing-success)
 
 ---
 
 ## 📖 Sobre
 
-O **English Teacher Agent** é um tutor de pronúncia de inglês que utiliza inteligência artificial para avaliar e corrigir a pronúncia de alunos brasileiros. Totalmente offline, preserva sua privacidade e funciona sem internet.
+O **TEACHER.PRO** é um tutor de inglês completo que utiliza **4 modelos de inteligência artificial** rodando 100% no seu computador. Diferente de aplicativos como Duolingo ou ELSA Speak, ele funciona **totalmente offline** — seus dados de voz, progresso e conversas nunca saem do seu dispositivo.
 
-### ✨ Funcionalidades
+Ideal para brasileiros que querem praticar pronúncia, vocabulário e conversação com feedback personalizado e privacidade total.
 
-- 🎤 **Gravação de áudio** diretamente no navegador
-- 📝 **Transcrição que preserva erros** (não auto-corrige)
-- 🔊 **Análise fonética** palavra por palavra
-- 🤖 **Feedback personalizado** via IA local (Ollama + Qwen)
-- 📊 **Scores detalhados** por palavra e geral
-- 🎯 **Dicas físicas** de pronúncia (posição da língua, lábios)
-- 📚 **Exercícios práticos** baseados nos erros
-- 🔒 **100% offline** - seus dados nunca saem do seu computador
+### ✨ Funcionalidades Principais
+
+| Modo | Descrição |
+|:---|:---|
+| 📖 **Vocabulário** | 320+ palavras em 13 categorias com pronúncia, tradução e scoring |
+| 🗣️ **Diálogos com IA** | Conversas realistas com personagens (garçom, recepcionista, médico) |
+| 💬 **Conversa Livre** | Chat aberto com tutor IA sobre qualquer tema |
+| 🔢 **Números** | Cardinais, ordinais, horas, preços e medidas |
+| 🎤 **Pronúncia** | Frases completas com análise fonética detalhada |
+| 📻 **Rádio em Inglês** | Estações ao vivo dos EUA/UK para imersão auditiva |
+
+### 🧠 Motores de IA Integrados
+
+| Modelo | Criador | Função |
+|:---|:---|:---|
+| **Whisper Tiny** | OpenAI | Transcrição de fala (preserva erros do aluno) |
+| **WavLM Base Plus** | Microsoft | Análise fonética por embedding acústico |
+| **Qwen 2.5 Coder 3B** | Alibaba | Tutor IA generativa para diálogos e feedback |
+| **Wav2Vec2 Base** | Meta | Alinhamento temporal de áudio |
 
 ---
 
 ## 🏗️ Arquitetura
-Usuário → [Browser] → [FastAPI] → [Pipeline de IA]
-├── Whisper (Transcrição)
-├── WavLM (Análise Fonética)
-├── Wav2Vec2 (Alinhamento)
-└── Qwen 2.5 (Feedback)
- 
- 
+Usuário (Navegador) → [FastAPI] → Pipeline de IA → Feedback
+│
+┌───────────────────┼───────────────────┐
+▼ ▼ ▼
+🎤 Whisper 🔊 WavLM 🤖 Qwen 2.5
+Transcrição Análise Fonética Tutor IA
+│ │ │
+└───────────────────┼───────────────────┘
+▼
+📊 SQLite + Gamificação
+
+text
+
 ### Tecnologias
 
-| Componente | Tecnologia | Função |
-|-----------|-----------|--------|
-| **Backend** | FastAPI + Uvicorn | Servidor web |
-| **Transcrição** | OpenAI Whisper tiny | Preserva erros |
-| **Análise Fonética** | Microsoft WavLM | Embeddings de áudio |
-| **Alinhamento** | Facebook Wav2Vec2 | Timestamps |
-| **Tutor IA** | Qwen 2.5 Coder 3B | Feedback em português |
-| **TTS** | Edge TTS | Áudio de referência |
-| **Áudio** | librosa + noisereduce | Processamento |
+| Categoria | Tecnologia | Função |
+|:---|:---|:---|
+| **Backend** | FastAPI + Uvicorn | Servidor web local |
+| **Frontend** | HTML5 + CSS3 + JavaScript | Interface dark premium |
+| **Banco de Dados** | SQLite + Repository Pattern | Progresso e conteúdo |
+| **Áudio** | librosa + noisereduce + pyloudnorm | Pipeline profissional |
+| **Voz** | Edge TTS | Síntese de voz neural gratuita |
+| **Segurança** | PyArmor + PyInstaller | Código ofuscado e empacotado |
 
 ---
 
-## 🚀 Instalação
+## 📥 Instalação (Usuário Final)
 
-### Pré-requisitos
+### ✅ Método Recomendado: Instalador .exe
 
-- Python 3.11+
-- FFmpeg
-- Ollama
-- Git (opcional)
+1. **Baixe** o instalador da [página de Releases](https://github.com/eartnet09-boop/TEACHER.PRO/releases)
+2. **Execute** como Administrador
+3. **Marque** "Instalar IA" para baixar FFmpeg + Ollama + Qwen
+4. **Aguarde** ~10 minutos (download do Qwen: 1.9 GB)
+5. **Clique** em "Iniciar TEACHER.PRO"
+6. **Acesse** http://localhost:8000
 
-### Passo a Passo
+### ⚙️ Requisitos Mínimos
+
+| Componente | Mínimo |
+|:---|:---|
+| **Sistema** | Windows 10/11 (64-bit) |
+| **RAM** | 4 GB |
+| **Disco** | 5 GB livres |
+| **Internet** | Apenas na 1ª instalação (baixar modelos) |
+
+---
+
+## 🔧 Instalação (Desenvolvedor)
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/english-teacher-agent.git
-cd english-teacher-agent
+git clone https://github.com/eartnet09-boop/TEACHER.PRO.git
+cd TEACHER.PRO
 
 # 2. Crie o ambiente virtual
 python -m venv venv
 
-# 3. Ative o ambiente
-# Windows:
-venv\Scripts\Activate.ps1
-# Linux/Mac:
-source venv/bin/activate
+# 3. Ative o ambiente (Windows)
+.\venv\Scripts\Activate.ps1
 
 # 4. Instale as dependências
 pip install -r requirements.txt
+pip install openai-whisper pyarmor pyinstaller
 
-# 5. Instale o Whisper
-pip install openai-whisper
-
-# 6. Configure as variáveis de ambiente
+# 5. Configure o ambiente
 cp .env.example .env
 
-# 7. Baixe os modelos
-python download_models.py
-
-# 8. Inicie o Ollama (em outro terminal)
+# 6. Inicie o Ollama e baixe o Qwen
 ollama serve
-
-# 9. Baixe o modelo Qwen
 ollama pull qwen2.5-coder:3b
 
-# 10. Execute o diagnóstico
+# 7. Execute
+python -m src.main
+📊 Comandos Úteis
+bash
+# Diagnóstico do sistema
 python -m src.main diagnose
 
-# 11. Inicie o servidor
-python -m src.main
-Acesse: http://localhost:8000
-
-📊 Diagnóstico
-bash
 # Verificação rápida
 python -m src.main check
 
-# Diagnóstico completo
-python -m src.main diagnose
+# Executar testes (47 testes)
+pytest tests/ -v
 
-# Pré-carregar modelos
-python -m src.main preload
-🎯 Como Usar
-Abra http://localhost:8000
-
-Clique em "Gravar" e leia a frase exibida
-
-Aguarde o processamento (3-5 segundos)
-
-Veja seu score e feedback personalizado
-
-Siga as dicas e pratique com os exercícios
-
-Clique em "Ouvir" para escutar a pronúncia correta
-
-Use "Próxima" para avançar para outra frase
-
+# Compilar executável
+pyinstaller --clean --noconfirm teachpro.spec
 📁 Estrutura do Projeto
 text
-english-teacher-agent/
+TEACHER.PRO/
 ├── src/
-│   ├── web/                    # Interface e servidor
-│   │   ├── app.py              # FastAPI
-│   │   ├── session_manager.py  # Sessões
+│   ├── web/                    # Servidor e interface
+│   │   ├── app.py              # FastAPI (25+ endpoints)
+│   │   ├── session_manager.py  # Gerenciamento de sessões
+│   │   ├── routers/            # Rotas modulares (/api/live/*)
 │   │   └── static/
-│   │       └── index.html      # Frontend
-│   ├── audio/                  # Processamento de áudio
-│   │   ├── processor.py        # Pipeline profissional
-│   │   └── recorder.py         # Gravação
-│   ├── transcription/          # Transcrição
-│   │   └── chall_model.py      # Whisper
-│   ├── pronunciation/          # Análise
-│   │   ├── wavlm_analyzer.py   # WavLM
-│   │   ├── scorer.py           # Pontuação
-│   │   └── aligner.py          # Alinhamento
-│   ├── llm/                    # Tutor IA
-│   │   ├── tutor.py            # Ollama
-│   │   └── prompts.py          # Templates
+│   │       └── index.html      # Frontend completo (5 abas)
+│   ├── audio/                  # Pipeline de áudio
+│   │   └── processor.py        # Noise reduction + LUFS normalization
+│   ├── transcription/          # Transcrição de fala
+│   │   └── chall_model.py      # Whisper com preservação de erros
+│   ├── pronunciation/          # Análise fonética
+│   │   ├── wavlm_analyzer.py   # WavLM embeddings
+│   │   ├── scorer.py           # Sistema de pontuação 0-100
+│   │   └── aligner.py          # Wav2Vec2 forced alignment
+│   ├── llm/                    # Inteligência Artificial
+│   │   ├── dialog_engine.py    # Motor de diálogos com personagens
+│   │   ├── tutor.py            # Feedback personalizado
+│   │   └── prompts.py          # Templates de prompt otimizados
 │   ├── tts/                    # Síntese de voz
 │   │   └── speaker.py          # Edge TTS
-│   ├── config.py               # Configurações
+│   ├── data/                   # Banco de dados
+│   │   ├── database.py         # Gerenciador SQLite
+│   │   ├── seeder.py           # 320 palavras, 82 diálogos
+│   │   └── repository.py       # Repository Pattern
+│   ├── enhancements/           # Modo híbrido
+│   │   ├── web_services.py     # 9 APIs externas gratuitas
+│   │   └── context_engine.py   # Orquestrador de contexto
+│   ├── models/                 # Modelos Pydantic
+│   ├── config.py               # Configuração centralizada
 │   └── main.py                 # Entrypoint
+├── tests/                      # 47 testes automatizados
+├── hooks/                      # Hooks do PyInstaller
+├── teachpro.spec               # Configuração de build
 ├── requirements.txt            # Dependências
-├── download_models.py          # Download de modelos
-├── .env.example                # Template de config
-├── .gitignore                  # Arquivos ignorados
-└── README.md                   # Documentação
-🔧 Comandos Úteis
-bash
-# Servidor
-python -m src.main              # Iniciar
-python -m src.main diagnose     # Diagnosticar
-python -m src.main check        # Verificar
-
-# Direto com uvicorn
-uvicorn src.web.app:app --reload --port 8000
-
-# Ollama
-ollama list                     # Modelos instalados
-ollama pull qwen2.5-coder:3b   # Baixar modelo
-ollama serve                    # Iniciar servidor
-
-# Modelos
-python download_models.py       # Baixar modelos
+└── README.md                   # Esta documentação
 🐛 Solução de Problemas
 Problema	Solução
-ModuleNotFoundError	Ative o venv: venv\Scripts\Activate.ps1
+ModuleNotFoundError	Ative o venv: .\venv\Scripts\Activate.ps1
 Ollama não conecta	Execute ollama serve em outro terminal
 FFmpeg não encontrado	winget install ffmpeg
-Porta 8000 em uso	Altere a porta no .env
-Score muito baixo	Fale mais próximo ao microfone
-Erro no PyTorch	pip install torch --index-url https://download.pytorch.org/whl/cpu
-🤝 Contribuindo
-Contribuições são bem-vindas! Siga os passos:
-
-Fork o projeto
-
-Crie uma branch (git checkout -b feature/nova-funcionalidade)
-
-Commit suas mudanças (git commit -m 'Adiciona funcionalidade X')
-
-Push para a branch (git push origin feature/nova-funcionalidade)
-
-Abra um Pull Request
-
+Porta 8000 em uso	Feche outras instâncias ou mude a porta no .env
+Index.html não encontrado	Recompile com pyinstaller --clean teachpro.spec
+Erro numba ou fastapi.middleware	Verifique o teachpro.spec (hiddenimports)
 📄 Licença
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Este projeto é proprietário. Todos os direitos reservados a Expedito Anderson Rufino.
+
+Veja o arquivo LICENSE para mais detalhes.
+
+👨‍💻 Desenvolvedor
+Expedito Anderson Rufino
+
+GitHub: @eartnet09-boop
+
+Repositório: TEACHER.PRO
 
 🙏 Agradecimentos
 OpenAI Whisper
@@ -204,3 +196,30 @@ Meta Wav2Vec2
 Alibaba Qwen
 
 Ollama
+
+FastAPI
+
+PyInstaller
+
+Inno Setup
+
+⭐ Se este projeto te ajudou, deixe uma estrela!
+
+text
+
+---
+
+## ✅ Melhorias Implementadas
+
+| Seção | Antes | Depois |
+|:---|:---|:---|
+| **Nome** | English Teacher Agent | TEACHER.PRO v4.2 |
+| **Badges** | 4 básicos | 6 com testes, plataforma, IA |
+| **Funcionalidades** | Texto corrido | Tabela com 6 modos + ícones |
+| **Modelos IA** | Lista simples | Tabela com criador e função |
+| **Instalação** | Só desenvolvedor | Usuário final PRIMEIRO |
+| **Estrutura** | Desatualizada | Completa com 15 pastas |
+| **Comandos** | Básicos | Inclui testes e build |
+| **Licença** | MIT | Proprietária (correto!) |
+| **Desenvolvedor** | Não tinha | Seção dedicada |
+| **Requisitos** | Não tinha | Tabela com mínimo |
