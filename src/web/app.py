@@ -72,8 +72,15 @@ app = FastAPI(
 from .routers import live_data
 app.include_router(live_data.router)
 
-app.add_middleware(CORSMiddleware, allow_origins=SERVER_CONFIG["allowed_origins"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"], max_age=3600)
+if SECURITY_CONFIG["cors_enabled"]:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=SERVER_CONFIG["allowed_origins"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+        max_age=3600,
+    )
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -151,6 +158,10 @@ async def create_session():
 async def analyze_pronunciation(audio: UploadFile = File(...), expected: str = Form(""), session_id: Optional[str] = Form(None)):
     temp_files = []; session = None
     try:
+        content = await audio.read(SERVER_CONFIG["max_upload_size"] + 1)
+        if len(content) > SERVER_CONFIG["max_upload_size"]:
+            return JSONResponse({"success": False, "error": "Arquivo excede o limite permitido"}, status_code=413)
+        if len(content) < 1000: raise ValueError("Áudio muito curto")
         if session_id: session = await session_manager.get_session(session_id)
         if not session: session = await session_manager.create_session()
         async with session.lock:
@@ -160,8 +171,6 @@ async def analyze_pronunciation(audio: UploadFile = File(...), expected: str = F
         uid = uuid.uuid4().hex
         tw, twv, tp = TEMP_DIR/f"rec_{uid}.webm", TEMP_DIR/f"rec_{uid}.wav", TEMP_DIR/f"proc_{uid}.wav"
         temp_files = [tw, twv, tp]
-        content = await audio.read()
-        if len(content) < 1000: raise ValueError("Áudio muito curto")
         with open(tw, "wb") as f: f.write(content)
         try:
             seg = AudioSegment.from_file(str(tw)).set_frame_rate(16000).set_channels(1).set_sample_width(2)

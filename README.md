@@ -176,8 +176,7 @@ Index.html não encontrado	Recompile com pyinstaller --clean teachpro.spec
 Erro numba ou fastapi.middleware	Verifique o teachpro.spec (hiddenimports)
 ## Licença
 Este projeto é proprietário. Todos os direitos reservados a Expedito Anderson Rufino.
-
-Veja o arquivo LICENSE para mais detalhes.
+É proibido comercializar ou utilizar este projeto sem autorização prévia e por escrito do titular. Consulte o arquivo [LICENSE](LICENSE) para os termos completos. Dependências e modelos de terceiros seguem suas próprias licenças.
 
 ## Desenvolvedor
 Expedito Anderson Rufino

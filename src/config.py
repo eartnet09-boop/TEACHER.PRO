@@ -43,14 +43,16 @@ for directory in [TEMP_DIR, MODELS_DIR, STATIC_DIR, DATA_DIR, LOGS_DIR]:
 # ============================================================
 
 SERVER_CONFIG: Dict[str, Any] = {
-    "host": os.getenv("HOST", "0.0.0.0"),
+    "host": os.getenv("HOST", "127.0.0.1"),
     "port": int(os.getenv("PORT", "8000")),
     "reload": os.getenv("RELOAD", "false").lower() == "true",
     "workers": int(os.getenv("WORKERS", "1")),
     "timeout_keep_alive": int(os.getenv("TIMEOUT_KEEP_ALIVE", "30")),
     "graceful_timeout": int(os.getenv("GRACEFUL_TIMEOUT", "10")),
     "max_upload_size": int(os.getenv("MAX_UPLOAD_SIZE", "10485760")),  # 10 MB
-    "allowed_origins": os.getenv("ALLOWED_ORIGINS", "*").split(","),
+    "allowed_origins": [origin.strip() for origin in os.getenv(
+        "ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
+    ).split(",") if origin.strip()],
     "environment": os.getenv("ENVIRONMENT", "development"),
 }
 
@@ -375,7 +377,7 @@ SECURITY_CONFIG: Dict[str, Any] = {
     "session_expiry_minutes": int(os.getenv("SESSION_EXPIRY", "30")),
     "max_sessions_per_user": int(os.getenv("MAX_SESSIONS", "3")),
     "csrf_protection": os.getenv("CSRF_PROTECTION", "false").lower() == "true",
-    "cors_enabled": os.getenv("CORS_ENABLED", "true").lower() == "true",
+    "cors_enabled": os.getenv("CORS_ENABLED", "false").lower() == "true",
     "rate_limiting_enabled": os.getenv("RATE_LIMITING", "false").lower() == "true",
     "max_upload_size_mb": int(os.getenv("MAX_UPLOAD_SIZE_MB", "20")),
     "allowed_file_types": [".wav", ".webm", ".mp3", ".ogg"],
